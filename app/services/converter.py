@@ -6,9 +6,9 @@ import shutil
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
-
 from app.db.repository import JobRecord
-
+from app.core.logging_config import setup_logging
+logger = setup_logging()
 MAX_DURATION_SECONDS = 3.0
 EMOJI_SIZE = 100
 
@@ -28,6 +28,8 @@ GRID_MAP: dict[str, tuple[int, int]] = {
 STATIC_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 VIDEO_EXTENSIONS = {".mp4", ".mov", ".mkv", ".webm", ".gif"}
 
+class ConversionError(RuntimeError):
+    """Ошибка обработки с безопасным для пользователя текстом (args[0])."""
 
 @dataclass
 class TileResult:
@@ -69,15 +71,11 @@ def ensure_ffmpeg_available() -> None:
 
 
 def _run(cmd: list[str], title: str) -> subprocess.CompletedProcess:
-    result = subprocess.run(
-        cmd,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-    )
+    result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     if result.returncode != 0:
         stderr = result.stderr.strip() or "Command failed"
-        raise RuntimeError(f"{title}: {stderr}")
+        logger.error("ffmpeg step failed: %s | %s", title, stderr)
+        raise ConversionError("Не удалось обработать файл. Проверьте формат и попробуйте ещё раз.")
     return result
 
 
@@ -436,7 +434,7 @@ def convert_job_to_tiles(job: JobRecord, base_output_dir: Path) -> ConversionRes
             f"{item.path.name}={item.size_bytes // 1024}KB@fps{item.fps}/crf{item.crf}"
             for item in failed
         )
-        raise RuntimeError(f"Some video tiles exceed 64KB limit: {details}")
+        raise ConversionError(f"Некоторые тайлы превышают лимит 64KB: {details}")
 
     return ConversionResult(
         public_id=job.public_id,

@@ -6,14 +6,9 @@ from typing import Optional
 import shutil
 
 SAFE_EXTENSIONS = {
-    ".jpg",
-    ".jpeg",
-    ".png",
-    ".webp",
-    ".gif",
-    ".mp4",
-    ".webm",
-    ".tgs",
+    ".jpg", ".jpeg", ".png", ".webp",   
+    ".gif",                              
+    ".mp4", ".webm", ".mov",
 }
 
 

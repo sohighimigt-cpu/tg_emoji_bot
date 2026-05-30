@@ -15,7 +15,7 @@ from app.db.repository import (
     get_job_by_public_id_for_user,
     mark_job_ready_for_user,
     set_job_source,
-    set_job_title_and_short_name,
+    count_inflight_jobs_for_user,
     update_job_selection,
 )
 from app.domain.pack_naming import build_short_name
@@ -38,6 +38,7 @@ TEMPLATES_DIR = BASE_DIR / "templates"
 MINIAPP_INDEX = TEMPLATES_DIR / "miniapp" / "index.html"
 MAX_UPLOAD_MB = int(os.getenv("MAX_UPLOAD_MB", "50"))
 MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024
+MAX_INFLIGHT_JOBS_PER_USER = int(os.getenv("MAX_INFLIGHT_JOBS_PER_USER", "1"))
 UPLOAD_CHUNK_SIZE = 1024 * 1024 
 ALLOWED_UPLOAD_EXTENSIONS: dict[str, set[str]] = {
     "photo": {".jpg", ".jpeg", ".png", ".webp"},
@@ -465,6 +466,11 @@ async def start_miniapp_job(
         raise HTTPException(status_code=400, detail="Title is missing")
     if not job.short_name:
         raise HTTPException(status_code=400, detail="Short name is missing")
+    if count_inflight_jobs_for_user(verified.user.id) >= MAX_INFLIGHT_JOBS_PER_USER:
+        raise HTTPException(
+            status_code=429,
+            detail="У вас уже есть задача в обработке. Дождитесь её завершения.",
+        )
 
     mark_job_ready_for_user(public_id, verified.user.id)
 

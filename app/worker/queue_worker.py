@@ -15,7 +15,7 @@ from app.db.repository import (
     mark_job_done,
     mark_job_failed,
 )
-from app.services.converter import convert_job_to_tiles
+from app.services.converter import convert_job_to_tiles, ConversionError
 from app.services.storage import remove_job_input_dir
 from app.services.telegram_publisher import create_custom_emoji_pack
 
@@ -56,7 +56,7 @@ async def process_job(job, bot: Bot) -> str:
 
     await notify_pack_ready(bot, job.chat_id, pack_url)
 
-    # remove_job_input_dir(settings.input_dir, job.public_id)
+    remove_job_input_dir(settings.input_dir, job.public_id)
     remove_job_output_dir(settings.output_dir, job.public_id)
 
     return pack_url
@@ -89,8 +89,21 @@ async def main() -> None:
                     pack_url = await process_job(job, bot)
                     mark_job_done(job.public_id, pack_url)
                     logger.info(f"Job completed public_id={job.public_id} pack_url={pack_url}")
-                except Exception as e:
+                except ConversionError as e:
                     mark_job_failed(job.public_id, str(e))
+                    logger.warning(f"Job failed (conversion) public_id={job.public_id}: {e}")
+                    try:
+                        remove_job_input_dir(settings.input_dir, job.public_id)
+                        remove_job_output_dir(settings.output_dir, job.public_id)
+                    except Exception:
+                        logger.exception(f"Cleanup failed public_id={job.public_id}")                
+                except Exception:
+                    mark_job_failed(job.public_id, "Внутренняя ошибка обработки. Попробуйте позже.")
+                    try:
+                        remove_job_input_dir(settings.input_dir, job.public_id)
+                        remove_job_output_dir(settings.output_dir, job.public_id)
+                    except Exception:
+                        logger.exception(f"Cleanup failed public_id={job.public_id}")                    
                     logger.exception(f"Job failed public_id={job.public_id}")
 
             except Exception as outer_error:

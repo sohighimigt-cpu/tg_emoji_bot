@@ -164,6 +164,19 @@ def get_active_job_for_user(user_id: int) -> Optional[JobRecord]:
         ).fetchone()
     return _row_to_job(row) if row else None
 
+def count_inflight_jobs_for_user(user_id: int) -> int:
+    with closing(_get_connection()) as conn:
+        row = conn.execute(
+            """
+            SELECT COUNT(*) AS c
+            FROM jobs
+            WHERE user_id = ?
+              AND status IN ('queued', 'processing')
+            """,
+            (user_id,),
+        ).fetchone()
+        return int(row["c"]) if row else 0
+
 
 def set_job_source(
     *,
