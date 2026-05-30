@@ -14,12 +14,14 @@ from app.db.repository import (
     claim_next_queued_job,
     mark_job_done,
     mark_job_failed,
+    set_job_title_and_short_name,
 )
 from app.services.converter import convert_job_to_tiles, ConversionError
 from app.services.storage import remove_job_input_dir
 from app.services.telegram_publisher import (
     create_custom_emoji_pack,
     add_tiles_to_existing_pack,
+    resolve_available_short_name,
 )
 
 logger = setup_logging()
@@ -44,26 +46,33 @@ def remove_job_output_dir(base_output_dir: Path, public_id: str) -> None:
     shutil.rmtree(job_dir)
 
 
-# async def notify_pack_ready(bot: Bot, chat_id: int, pack_url: str) -> None:
-#     await bot.send_message(
-#         chat_id=chat_id,
-#         text=f"Пак готов.\n\n{pack_url}",
-#     )
-
-
 async def process_job(job, bot: Bot) -> str:
     settings = load_settings()
 
-    conversion = convert_job_to_tiles(job, settings.output_dir)
-
+    # Добавление в существующий пак: имя фиксировано, уникализация не нужна.
     if job.target_short_name:
-        pack_url = await add_tiles_to_existing_pack(job, conversion)
-    else:
-        pack_url = await create_custom_emoji_pack(job, conversion)
+        conversion = convert_job_to_tiles(job, settings.output_dir)
+        return await add_tiles_to_existing_pack(job, conversion)
 
-    # await notify_pack_ready(bot, job.chat_id, pack_url)
+    if not job.short_name:
+        raise RuntimeError("job.short_name is empty")
 
-    return pack_url
+    # 1) СНАЧАЛА проверяем занятость имени и при необходимости делаем уникальное
+    unique_short_name = await resolve_available_short_name(
+        title=job.title or "emoji",
+        short_name=job.short_name,
+        bot_username=settings.bot_username,
+    )
+    if unique_short_name != job.short_name:
+        job.short_name = unique_short_name
+        set_job_title_and_short_name(
+            job.public_id, job.title or "emoji", unique_short_name
+        )
+
+    # 2) И ТОЛЬКО ПОТОМ конвертируем и создаём пак
+    conversion = convert_job_to_tiles(job, settings.output_dir)
+    return await create_custom_emoji_pack(job, conversion)
+
 
 async def main() -> None:
     settings = load_settings()
@@ -99,14 +108,14 @@ async def main() -> None:
                         remove_job_input_dir(settings.input_dir, job.public_id)
                         remove_job_output_dir(settings.output_dir, job.public_id)
                     except Exception:
-                        logger.exception(f"Cleanup failed public_id={job.public_id}")                
+                        logger.exception(f"Cleanup failed public_id={job.public_id}")
                 except Exception:
                     mark_job_failed(job.public_id, "Внутренняя ошибка обработки. Попробуйте позже.")
                     try:
                         remove_job_input_dir(settings.input_dir, job.public_id)
                         remove_job_output_dir(settings.output_dir, job.public_id)
                     except Exception:
-                        logger.exception(f"Cleanup failed public_id={job.public_id}")                    
+                        logger.exception(f"Cleanup failed public_id={job.public_id}")
                     logger.exception(f"Job failed public_id={job.public_id}")
 
             except Exception as outer_error:
