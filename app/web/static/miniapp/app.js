@@ -8,6 +8,7 @@ const ALLOWED_EXTENSIONS = [
 const VIDEO_EXTENSIONS = [".mp4", ".webm", ".mov"];
 const TERMINAL_STATUSES = ["done", "failed", "cancelled"];
 const POLL_INTERVAL_MS = 2500;
+const THEME_STORAGE_KEY = "emoji-pack-theme";
 
 const state = {
   user: null,
@@ -40,12 +41,73 @@ function cacheEls() {
   els.submit = document.querySelector("[data-submit]");
   els.status = document.querySelector("[data-status]");
   els.result = document.querySelector("[data-result]");
+  els.tabButtons = [...document.querySelectorAll("[data-tab]")];
+  els.views = [...document.querySelectorAll("[data-view]")];
+  els.history = document.querySelector("[data-history]");
+  els.historyRefresh = document.querySelector("[data-history-refresh]");
+  els.themeGroup = document.querySelector("[data-theme-group]");
 }
 
 /* ---------- Тема ---------- */
+function getThemePref() {
+  try {
+    return localStorage.getItem(THEME_STORAGE_KEY) || "auto";
+  } catch {
+    return "auto";
+  }
+}
+
 function applyTheme() {
-  const scheme = tg?.colorScheme === "dark" ? "dark" : "light";
+  const pref = getThemePref();
+  let scheme;
+  if (pref === "light" || pref === "dark") {
+    scheme = pref;
+  } else {
+    scheme = tg?.colorScheme === "dark" ? "dark" : "light";
+  }
   document.documentElement.dataset.theme = scheme;
+}
+
+function renderThemeControls() {
+  const pref = getThemePref();
+  els.themeGroup?.querySelectorAll("[data-theme-value]").forEach((btn) => {
+    btn.classList.toggle("is-active", btn.dataset.themeValue === pref);
+  });
+}
+
+function setThemePref(value) {
+  try {
+    localStorage.setItem(THEME_STORAGE_KEY, value);
+  } catch {
+    /* ignore */
+  }
+  applyTheme();
+  renderThemeControls();
+}
+
+function bindThemeControls() {
+  els.themeGroup?.querySelectorAll("[data-theme-value]").forEach((btn) => {
+    btn.addEventListener("click", () => setThemePref(btn.dataset.themeValue));
+  });
+}
+
+/* ---------- Вкладки ---------- */
+function setActiveTab(name) {
+  els.tabButtons.forEach((btn) => {
+    btn.classList.toggle("is-active", btn.dataset.tab === name);
+  });
+  els.views.forEach((view) => {
+    view.hidden = view.dataset.view !== name;
+  });
+  if (name === "history") {
+    loadHistory();
+  }
+}
+
+function bindTabs() {
+  els.tabButtons.forEach((btn) => {
+    btn.addEventListener("click", () => setActiveTab(btn.dataset.tab));
+  });
 }
 
 /* ---------- API ---------- */
@@ -120,6 +182,10 @@ function fetchJob(publicId) {
   return apiFetch(`/api/miniapp/jobs/${publicId}`, { method: "GET" });
 }
 
+function fetchHistory() {
+  return apiFetch("/api/miniapp/history", { method: "GET" });
+}
+
 /* ---------- Экранирование ---------- */
 function escapeHtml(value) {
   return String(value)
@@ -149,6 +215,7 @@ function renderStatus(message, kind = "info") {
 
 function statusLabel(status) {
   const map = {
+    draft: "черновик",
     queued: "в очереди",
     processing: "обрабатывается",
     ready: "готова к обработке",
@@ -258,13 +325,15 @@ function renderPreview(file) {
     media.setAttribute("muted", "");
     media.setAttribute("playsinline", "");
     media.preload = "metadata";
-    media.play?.().catch(() => {});
   } else {
     media = document.createElement("img");
     media.src = state.previewUrl;
     media.alt = file.name;
   }
   els.previewMedia.insertBefore(media, els.fileName);
+  if (media.tagName === "VIDEO") {
+    media.play?.().catch(() => {});
+  }
   els.fileName.textContent = file.name;
 
   els.dropzoneEmpty.hidden = true;
@@ -476,16 +545,77 @@ function renderResult(job) {
   els.result.hidden = false;
 }
 
+/* ---------- История ---------- */
+function historyBadgeKind(status) {
+  if (status === "done") return "success";
+  if (status === "failed" || status === "cancelled") return "error";
+  return "info";
+}
+
+function formatDate(value) {
+  if (!value) return "";
+  const iso = value.includes("T") ? value : value.replace(" ", "T") + "Z";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return value;
+  return d.toLocaleString();
+}
+
+async function loadHistory() {
+  els.history.innerHTML = `<p class="history__empty">Загрузка…</p>`;
+  try {
+    const data = await fetchHistory();
+    renderHistory(data.items || []);
+  } catch (err) {
+    els.history.innerHTML = `<p class="history__empty">${escapeHtml(
+      err.message || "Не удалось загрузить историю."
+    )}</p>`;
+  }
+}
+
+function renderHistory(items) {
+  if (!items.length) {
+    els.history.innerHTML = `<p class="history__empty">Пока нет созданных паков.</p>`;
+    return;
+  }
+  els.history.innerHTML = items
+    .map((item) => {
+      const kind = historyBadgeKind(item.status);
+      const meta = [
+        state.orientationOptions[item.orientation] || item.orientation,
+        item.grid_code,
+        formatDate(item.created_at),
+      ]
+        .filter(Boolean)
+        .map((part) => escapeHtml(String(part)))
+        .join(" · ");
+      const link = item.pack_url
+        ? `<a class="btn btn--primary btn--sm history__link" href="${escapeHtml(
+            item.pack_url
+          )}" target="_blank" rel="noopener">Открыть пак</a>`
+        : "";
+      return `<article class="history__item"><div class="history__row"><h3 class="history__title">${escapeHtml(
+        item.title || "Без названия"
+      )}</h3><span class="badge" data-kind="${kind}">${escapeHtml(
+        statusLabel(item.status)
+      )}</span></div><p class="history__meta">${meta}</p>${link}</article>`;
+    })
+    .join("");
+}
+
 /* ---------- Старт ---------- */
 function bindUi() {
   els.form.addEventListener("submit", handleSubmit);
   els.title.addEventListener("input", updateSubmitState);
   bindDropzone();
+  bindTabs();
+  bindThemeControls();
+  els.historyRefresh?.addEventListener("click", loadHistory);
 }
 
 async function bootstrap() {
   cacheEls();
   applyTheme();
+  renderThemeControls();
 
   if (tg) {
     tg.ready();
@@ -494,6 +624,7 @@ async function bootstrap() {
   }
 
   bindUi();
+  setActiveTab("create");
   updateSubmitState();
 
   try {

@@ -457,3 +457,147 @@ input {
   margin-top: 4px;
   text-decoration: none;
 }
+
+/* ===== Вкладки (views) ===== */
+.app {
+  padding-bottom: max(96px, calc(76px + env(safe-area-inset-bottom)));
+}
+
+.view {
+  display: grid;
+  gap: var(--gap);
+}
+
+.view__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.view__title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+/* ===== Нижняя панель ===== */
+.tabbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  padding: 8px 12px max(8px, env(safe-area-inset-bottom));
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  border-top: 1px solid var(--border);
+  backdrop-filter: saturate(180%) blur(12px);
+  -webkit-backdrop-filter: saturate(180%) blur(12px);
+}
+
+.tabbar__btn {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  padding: 6px 4px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: color var(--transition), background-color var(--transition);
+}
+
+.tabbar__btn:hover {
+  background: var(--surface-2);
+}
+
+.tabbar__btn.is-active {
+  color: var(--accent);
+}
+
+.tabbar__icon {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.tabbar__label {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* ===== История ===== */
+.history {
+  display: grid;
+  gap: 12px;
+}
+
+.history__empty {
+  margin: 0;
+  color: var(--muted);
+  text-align: center;
+  padding: 24px 8px;
+}
+
+.history__item {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.history__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.history__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.history__meta {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.history__link {
+  justify-self: start;
+}
+
+/* ===== Бейдж статуса ===== */
+.badge {
+  flex: 0 0 auto;
+  padding: 2px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--surface-2);
+  color: var(--muted);
+}
+
+.badge[data-kind="success"] {
+  background: rgba(46, 158, 91, 0.15);
+  color: var(--success);
+}
+
+.badge[data-kind="error"] {
+  background: rgba(210, 69, 61, 0.15);
+  color: var(--danger);
+}
+
+.badge[data-kind="info"] {
+  background: var(--accent-soft);
+  color: var(--accent);
+}

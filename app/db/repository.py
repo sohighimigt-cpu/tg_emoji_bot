@@ -148,6 +148,19 @@ def get_latest_job_for_user(user_id: int) -> Optional[JobRecord]:
         ).fetchone()
     return _row_to_job(row) if row else None
 
+def list_jobs_for_user(user_id: int, *, limit: int = 50, offset: int = 0) -> list[JobRecord]:
+    with closing(_get_connection()) as conn:
+        rows = conn.execute(
+            """
+            SELECT * FROM jobs
+            WHERE user_id = ?
+            ORDER BY id DESC
+            LIMIT ? OFFSET ?
+            """,
+            (user_id, limit, offset),
+        ).fetchall()
+        return [_row_to_job(row) for row in rows]
+
 
 def get_active_job_for_user(user_id: int) -> Optional[JobRecord]:
     with closing(_get_connection()) as conn:

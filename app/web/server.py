@@ -15,6 +15,7 @@ from app.db.repository import (
     get_job_by_public_id_for_user,
     mark_job_ready_for_user,
     set_job_source,
+    list_jobs_for_user,
     count_inflight_jobs_for_user,
     update_job_selection,
 )
@@ -68,6 +69,15 @@ class JobResponse(BaseModel):
     pack_url: str | None
     error_message: str | None
 
+class JobHistoryItem(BaseModel):
+    public_id: str
+    status: str
+    title: str | None
+    short_name: str | None
+    orientation: str | None
+    grid_code: str | None
+    pack_url: str | None
+    created_at: str
 
 class MiniAppAuthRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -325,6 +335,30 @@ async def create_miniapp_job(
         raise HTTPException(status_code=404, detail="Job not found after creation")
 
     return _job_response(updated)
+
+@app.get("/api/miniapp/history")
+async def miniapp_history(
+    request: Request,
+    authorization: str | None = Header(default=None),
+):
+    settings = request.app.state.settings
+    verified = _extract_verified_user(authorization, settings.bot_token)
+    jobs = list_jobs_for_user(verified.user.id, limit=50)
+    return {
+        "items": [
+            JobHistoryItem(
+                public_id=j.public_id,
+                status=j.status,
+                title=j.title,
+                short_name=j.short_name,
+                orientation=j.orientation,
+                grid_code=j.grid_code,
+                pack_url=j.pack_url,
+                created_at=j.created_at,
+            )
+            for j in jobs
+        ]
+    }
 
 @app.post("/api/miniapp/jobs/{public_id}/upload", response_model=JobResponse)
 async def upload_job_source(

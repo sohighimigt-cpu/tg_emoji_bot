@@ -17,74 +17,115 @@
         <h1 class="app__title">Emoji Pack Builder</h1>
       </div>
     </header>
-
-    <section class="card account">
-      <span class="account__label">Аккаунт</span>
-      <span class="account__value" data-user>Инициализация…</span>
+    
+    <!-- ВКЛАДКА: МЕНЮ (ИСТОРИЯ) -->
+    <section class="view" data-view="history" hidden>
+      <div class="view__head">
+        <h2 class="view__title">История</h2>
+        <button type="button" class="btn btn--ghost btn--sm" data-history-refresh>Обновить</button>
+      </div>
+      <div class="history" data-history></div>
     </section>
 
-    <form class="card form" data-form novalidate>
-      <div class="field">
-        <span class="field__label">Изображение или видео</span>
-        <div
-          class="dropzone"
-          data-dropzone
-          tabindex="0"
-          role="button"
-          aria-label="Перетащите файл сюда или выберите вручную"
-        >
-          <input
-            type="file"
-            data-file
-            accept=".jpg,.jpeg,.png,.webp,.gif,.mp4,.webm,.mov,image/*,video/*"
-            hidden
-          />
-          <div class="dropzone__empty" data-dropzone-empty>
-            <div class="dropzone__icon" aria-hidden="true">⬆</div>
-            <p class="dropzone__title">Перетащите файл сюда</p>
-            <p class="dropzone__hint">JPG, PNG, WEBP, GIF, MP4, WEBM, MOV · до 50 МБ</p>
-            <span class="btn btn--ghost">Выбрать файл</span>
-          </div>
-          <div class="dropzone__preview" data-preview hidden>
-            <div class="preview__media" data-preview-media>
-              <span class="preview__name" data-file-name></span>
+     <!-- ВКЛАДКА: СОЗДАТЬ -->
+     <section class="view" data-view="create">
+      <section class="card account">
+        <span class="account__label">Аккаунт</span>
+        <span class="account__value" data-user>Инициализация…</span>
+      </section>
+
+      <form class="card form" data-form novalidate>
+        <div class="field">
+          <span class="field__label">Изображение или видео</span>
+          <div
+            class="dropzone"
+            data-dropzone
+            tabindex="0"
+            role="button"
+            aria-label="Перетащите файл сюда или выберите вручную"
+          >
+            <input
+              type="file"
+              data-file
+              accept=".jpg,.jpeg,.png,.webp,.gif,.mp4,.webm,.mov,image/*,video/*"
+              hidden
+            />
+            <div class="dropzone__empty" data-dropzone-empty>
+              <div class="dropzone__icon" aria-hidden="true">⬆</div>
+              <p class="dropzone__title">Перетащите файл сюда</p>
+              <p class="dropzone__hint">JPG, PNG, WEBP, GIF, MP4, WEBM, MOV · до 50 МБ</p>
+              <span class="btn btn--ghost">Выбрать файл</span>
             </div>
-            <button type="button" class="btn btn--ghost btn--sm" data-clear>Заменить файл</button>
+            <div class="dropzone__preview" data-preview hidden>
+              <div class="preview__media" data-preview-media>
+                <span class="preview__name" data-file-name></span>
+              </div>
+              <button type="button" class="btn btn--ghost btn--sm" data-clear>Заменить файл</button>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div class="form__config" data-config hidden>
-        <div class="field">
-          <label class="field__label" for="pack-title">Название пака</label>
-          <input
-            id="pack-title"
-            class="input"
-            type="text"
-            data-title
-            maxlength="64"
-            placeholder="Например, My Cats"
-            autocomplete="off"
-          />
+        <div class="form__config" data-config hidden>
+          <div class="field">
+            <label class="field__label" for="pack-title">Название пака</label>
+            <input
+              id="pack-title"
+              class="input"
+              type="text"
+              data-title
+              maxlength="64"
+              placeholder="Например, My Cats"
+              autocomplete="off"
+            />
+          </div>
+
+          <div class="field">
+            <span class="field__label">Ориентация</span>
+            <div class="pills" data-orientation-group></div>
+          </div>
+
+          <div class="field">
+            <span class="field__label">Сетка</span>
+            <div class="pills" data-grid-group></div>
+          </div>
+
+          <button type="submit" class="btn btn--primary btn--block" data-submit disabled>Создать пак</button>
         </div>
+      </form>
 
+      <section class="card status" data-status hidden></section>
+      <section class="card result" data-result hidden></section>
+    </section>
+    <!-- ВКЛАДКА: НАСТРОЙКИ -->
+    <section class="view" data-view="settings" hidden>
+      <h2 class="view__title">Настройки</h2>
+      <section class="card">
         <div class="field">
-          <span class="field__label">Ориентация</span>
-          <div class="pills" data-orientation-group></div>
+          <span class="field__label">Тема</span>
+          <div class="pills" data-theme-group>
+            <button type="button" class="pill" data-theme-value="auto">Авто</button>
+            <button type="button" class="pill" data-theme-value="light">Светлая</button>
+            <button type="button" class="pill" data-theme-value="dark">Тёмная</button>
+          </div>
         </div>
-
-        <div class="field">
-          <span class="field__label">Сетка</span>
-          <div class="pills" data-grid-group></div>
-        </div>
-
-        <button type="submit" class="btn btn--primary btn--block" data-submit disabled>Создать пак</button>
-      </div>
-    </form>
-
-    <section class="card status" data-status hidden></section>
-    <section class="card result" data-result hidden></section>
+      </section>
+    </section>
   </main>
+
+  <nav class="tabbar">
+    <button type="button" class="tabbar__btn is-active" data-tab="create">
+      <span class="tabbar__icon" aria-hidden="true">＋</span>
+      <span class="tabbar__label">Создать</span>
+    </button>
+    <button type="button" class="tabbar__btn" data-tab="history">
+      <span class="tabbar__icon" aria-hidden="true">☰</span>
+      <span class="tabbar__label">Меню</span>
+    </button>
+    <button type="button" class="tabbar__btn" data-tab="settings">
+      <span class="tabbar__icon" aria-hidden="true">⚙</span>
+      <span class="tabbar__label">Настройки</span>
+    </button>
+  </nav>
 
   <script src="/static/miniapp/app.js"></script>
 </body>
