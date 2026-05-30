@@ -33,6 +33,9 @@ const els = {};
 function cacheEls() {
   els.form = document.querySelector("[data-form]");
   els.user = document.querySelector("[data-user]");
+  els.greeting = document.querySelector("[data-greeting]");
+  els.userPhoto = document.querySelector("[data-user-photo]");
+  els.userInitial = document.querySelector("[data-user-initial]");
   els.fileInput = document.querySelector("[data-file]");
   els.dropzone = document.querySelector("[data-dropzone]");
   els.dropzoneEmpty = document.querySelector("[data-dropzone-empty]");

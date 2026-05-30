@@ -34,17 +34,18 @@
       <div class="history" data-history></div>
     </section>
 
-     <!-- ВКЛАДКА: СОЗДАТЬ -->
-     <div class="account">
-      <div class="account__avatar">
-        <img class="account__photo" data-user-photo alt="" hidden>
-        <span class="account__initial" data-user-initial aria-hidden="true">🙂</span>
+    <!-- ВКЛАДКА: СОЗДАТЬ -->
+    <section class="view" data-view="create">
+      <div class="account">
+        <div class="account__avatar">
+          <img class="account__photo" data-user-photo alt="" hidden>
+          <span class="account__initial" data-user-initial aria-hidden="true">🙂</span>
+        </div>
+        <div class="account__text">
+          <span class="account__greeting" data-greeting>Привет,</span>
+          <span class="account__name" data-user>Инициализация…</span>
+        </div>
       </div>
-      <div class="account__text">
-        <span class="account__greeting" data-greeting>Привет,</span>
-        <span class="account__name" data-user>Инициализация…</span>
-      </div>
-    </div>
 
       <form class="card form" data-form novalidate>
         <div class="field">
@@ -80,7 +81,6 @@
         <div class="form__config" data-config hidden>
           <div class="field">
             <label class="field__label" for="pack-title">Название пака</label>
-    
             <input
               id="pack-title"
               class="input"
@@ -113,6 +113,7 @@
       <section class="card status" data-status hidden></section>
       <section class="card result" data-result hidden></section>
     </section>
+
     <!-- ВКЛАДКА: НАСТРОЙКИ -->
     <section class="view" data-view="settings" hidden>
       <h2 class="view__title">Настройки</h2>
