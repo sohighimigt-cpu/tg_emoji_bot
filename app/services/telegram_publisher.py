@@ -81,7 +81,37 @@ async def _upload_tile_as_document(
         file_reference=document.file_reference,
     )
 
+async def add_tiles_to_existing_pack(
+    job: JobRecord,
+    conversion: ConversionResult,
+) -> str:
+    if not job.target_short_name:
+        raise RuntimeError("job.target_short_name is empty")
+    if not conversion.successful_tiles:
+        raise RuntimeError("No successful tiles to publish")
 
+    client = await _build_client()
+    try:
+        stickerset = types.InputStickerSetShortName(short_name=job.target_short_name)
+
+        for tile in sorted(conversion.successful_tiles, key=lambda x: x.index):
+            input_document = await _upload_tile_as_document(client, tile.path)
+            await client(
+                functions.stickers.AddStickerToSetRequest(
+                    stickerset=stickerset,
+                    sticker=types.InputStickerSetItem(
+                        document=input_document,
+                        emoji=DEFAULT_EMOJI_ALT,
+                        keywords="",
+                    ),
+                )
+            )
+            logger.info(f"Added tile {tile.path.name} to set {job.target_short_name}")
+
+        return f"https://t.me/addemoji/{job.target_short_name}"
+    finally:
+        await client.disconnect()
+        
 async def create_custom_emoji_pack(
     job: JobRecord,
     conversion: ConversionResult,
@@ -135,3 +165,4 @@ async def create_custom_emoji_pack(
 
     finally:
         await client.disconnect()
+        
