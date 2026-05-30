@@ -38,7 +38,23 @@ TEMPLATES_DIR = BASE_DIR / "templates"
 MINIAPP_INDEX = TEMPLATES_DIR / "miniapp" / "index.html"
 MAX_UPLOAD_MB = int(os.getenv("MAX_UPLOAD_MB", "50"))
 MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024
-UPLOAD_CHUNK_SIZE = 1024 * 1024  # 1 MiB
+UPLOAD_CHUNK_SIZE = 1024 * 1024 
+ALLOWED_UPLOAD_EXTENSIONS: dict[str, set[str]] = {
+    "photo": {".jpg", ".jpeg", ".png", ".webp"},
+    "animation": {".gif"},
+    "video": {".mp4", ".webm", ".mov"},
+}
+_EXT_TO_SOURCE_TYPE = {
+    ext: stype
+    for stype, exts in ALLOWED_UPLOAD_EXTENSIONS.items()
+    for ext in exts
+}
+ALLOWED_EXTENSIONS = set(_EXT_TO_SOURCE_TYPE)
+
+ALLOWED_MIME_TYPES = {
+    "image/jpeg", "image/png", "image/webp", "image/gif",
+    "video/mp4", "video/webm", "video/quicktime",
+}
 
 
 class JobResponse(BaseModel):
@@ -302,7 +318,6 @@ async def create_miniapp_job(
 
     return _job_response(updated)
 
-
 @app.post("/api/miniapp/jobs/{public_id}/upload", response_model=JobResponse)
 async def upload_job_source(
     public_id: str,
@@ -317,7 +332,6 @@ async def upload_job_source(
     if job is None:
         raise HTTPException(status_code=404, detail="Job not found")
 
-    
     declared = request.headers.get("content-length")
     if declared is not None:
         try:
@@ -327,10 +341,27 @@ async def upload_job_source(
                     detail=f"File too large. Max {MAX_UPLOAD_MB} MB.",
                 )
         except ValueError:
-            pass 
+            pass  # битый заголовок — поймает потоковый guard ниже
 
     original_filename = file.filename or "upload.bin"
-    suffix = Path(original_filename).suffix or ".bin"
+
+    # --- whitelist: расширение это жёсткий барьер ---
+    suffix = (Path(original_filename).suffix or "").lower()
+    if suffix not in ALLOWED_EXTENSIONS:
+        raise HTTPException(
+            status_code=415,
+            detail="Unsupported file extension. Allowed: "
+            + ", ".join(sorted(ALLOWED_EXTENSIONS)),
+        )
+
+    # --- MIME: вторичная проверка; пустой/octet-stream допускаем, т.к. расширение уже проверено ---
+    content_type = (file.content_type or "").split(";")[0].strip().lower()
+    if content_type and content_type not in ALLOWED_MIME_TYPES | {"application/octet-stream"}:
+        raise HTTPException(status_code=415, detail="Unsupported content type.")
+
+    # source_type выводим из проверенного расширения, а не из слов клиента
+    source_type = _EXT_TO_SOURCE_TYPE[suffix]
+
     destination = build_job_input_path(
         settings.input_dir,
         public_id,
@@ -338,7 +369,7 @@ async def upload_job_source(
         suffix,
     )
 
-    
+    # Жёсткий лимит размера на лету, независимо от заголовков
     written = 0
     try:
         with destination.open("wb") as buffer:
@@ -354,19 +385,10 @@ async def upload_job_source(
                     )
                 buffer.write(chunk)
     except BaseException:
-        destination.unlink(missing_ok=True) 
+        destination.unlink(missing_ok=True)
         raise
     finally:
         await file.close()
-
-    content_type = (file.content_type or "").lower()
-    source_type = "document"
-    if content_type.startswith("image/"):
-        source_type = "photo"
-    elif content_type.startswith("video/"):
-        source_type = "video"
-    elif content_type == "image/gif":
-        source_type = "animation"
 
     set_job_source(
         public_id=public_id,
