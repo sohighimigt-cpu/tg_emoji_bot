@@ -11,8 +11,15 @@
 <body>
   <main class="app">
     <header class="app__header">
-      <div class="logo" aria-hidden="true">✦</div>
-      <div class="app__heading">
+      <div class="logo" aria-hidden="true">
+        <svg class="brand-eye" viewBox="0 0 48 48" role="img" aria-label="logo" xmlns="http://www.w3.org/2000/svg">
+          <path class="brand-eye__lid" d="M3 24C11 11 37 11 45 24C37 37 11 37 3 24Z" />
+          <circle class="brand-eye__iris" cx="24" cy="24" r="9" />
+          <circle class="brand-eye__pupil" cx="24" cy="24" r="4.2" />
+          <circle class="brand-eye__glint" cx="27.5" cy="20.5" r="1.7" />
+        </svg>
+      </div>
+      <div>
         <p class="app__eyebrow">Telegram Mini App</p>
         <h1 class="app__title">Emoji Pack Builder</h1>
       </div>
@@ -28,11 +35,16 @@
     </section>
 
      <!-- ВКЛАДКА: СОЗДАТЬ -->
-     <section class="view" data-view="create">
-      <section class="card account">
-        <span class="account__label">Аккаунт</span>
-        <span class="account__value" data-user>Инициализация…</span>
-      </section>
+     <div class="account">
+      <div class="account__avatar">
+        <img class="account__photo" data-user-photo alt="" hidden>
+        <span class="account__initial" data-user-initial aria-hidden="true">🙂</span>
+      </div>
+      <div class="account__text">
+        <span class="account__greeting" data-greeting>Привет,</span>
+        <span class="account__name" data-user>Инициализация…</span>
+      </div>
+    </div>
 
       <form class="card form" data-form novalidate>
         <div class="field">

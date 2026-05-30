@@ -210,9 +210,32 @@ function escapeHtml(value) {
 
 /* ---------- Пользователь и статус ---------- */
 function renderUser(user) {
-  state.user = user;
-  els.user.textContent =
-    user?.display_name || user?.username || (user?.id ? `ID ${user.id}` : "—");
+	const lang = (user.language_code || navigator.language || "en").toLowerCase();
+	const isRu = lang.startsWith("ru");
+	const name =
+		user.first_name ||
+		user.display_name ||
+		user.username ||
+		(isRu ? "друг" : "there");
+
+	if (els.greeting) els.greeting.textContent = isRu ? "Привет," : "Hi,";
+	if (els.user) els.user.textContent = name;
+
+	const photo = tg?.initDataUnsafe?.user?.photo_url || null;
+	if (photo && els.userPhoto) {
+		els.userPhoto.src = photo;
+		els.userPhoto.hidden = false;
+		els.userPhoto.onerror = () => {
+			els.userPhoto.hidden = true;
+			if (els.userInitial) els.userInitial.hidden = false;
+		};
+		if (els.userInitial) els.userInitial.hidden = true;
+	} else if (els.userInitial) {
+		els.userInitial.textContent =
+			(name || "🙂").trim().charAt(0).toUpperCase() || "🙂";
+		els.userInitial.hidden = false;
+		if (els.userPhoto) els.userPhoto.hidden = true;
+	}
 }
 
 function renderStatus(message, kind = "info") {

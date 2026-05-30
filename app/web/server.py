@@ -185,7 +185,7 @@ async def add_security_headers(request: Request, call_next):
         "default-src 'self'; "
         "script-src 'self' https://telegram.org; "
         "style-src 'self' 'unsafe-inline'; "
-        "img-src 'self' data: blob:; "
+        "img-src 'self' data: blob: https://t.me https://*.telegram.org https://*.telegram-cdn.org; "
         "media-src 'self' blob: data:; "
         "connect-src 'self'; "
         "font-src 'self' data:; "
