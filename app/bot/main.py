@@ -299,6 +299,7 @@ async def handle_media(message: Message, bot: Bot, state: FSMContext) -> None:
 
     set_job_source(
         public_id=public_id,
+        user_id=message.from_user.id,
         source_type=source_type,
         source_file_id=source_file_id,
         source_file_path=str(destination),

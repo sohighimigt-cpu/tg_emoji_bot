@@ -49,6 +49,7 @@
           >
             <input
               type="file"
+              id="file-input"
               data-file
               accept=".jpg,.jpeg,.png,.webp,.gif,.mp4,.webm,.mov,image/*,video/*"
               hidden
@@ -61,7 +62,7 @@
               </div>
               <p class="dropzone__title" data-dz-desktop-only>Перетащите файл сюда</p>
               <p class="dropzone__hint">JPG · PNG · WEBP · GIF · MP4 · WEBM · MOV · до 50 МБ</p>
-              <span class="btn btn--primary dropzone__cta">Выбрать файл</span>
+              <label for="file-input" class="btn btn--primary dropzone__cta">Выбрать файл</label>
             </div>
             <div class="dropzone__preview" data-preview hidden>
               <div class="preview__media" data-preview-media>
@@ -81,8 +82,9 @@
               type="text"
               data-title
               maxlength="64"
-              placeholder="Например, My Cats"
+              placeholder="Например, fastlife"
               autocomplete="off"
+              enterkeyhint="done"
             />
           </div>
           <div class="add-banner" data-addbanner hidden>

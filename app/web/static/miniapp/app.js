@@ -82,7 +82,12 @@ function applyTheme() {
   } else {
     scheme = tg?.colorScheme === "dark" ? "dark" : "light";
   }
-  document.documentElement.dataset.theme = scheme;
+  const root = document.documentElement;
+  // мгновенная смена темы без «съезжающих» переходов
+  root.classList.add("theme-switching");
+  root.dataset.theme = scheme;
+  clearTimeout(applyTheme._timer);
+  applyTheme._timer = setTimeout(() => root.classList.remove("theme-switching"), 260);
 }
 
 function renderThemeControls() {
@@ -490,7 +495,17 @@ function bindDropzone() {
 
   els.dropzone.addEventListener("click", (event) => {
     if (event.target.closest("[data-clear]")) return;
+    if (event.target.closest("label")) return;
+    if (document.body.classList.contains("is-touch")) return;
     openPicker();
+  });
+
+  
+  els.title?.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      els.title.blur();
+    }
   });
 
   els.dropzone.addEventListener("keydown", (event) => {
@@ -554,6 +569,19 @@ function updateSubmitState() {
   els.submit.disabled = !isFormComplete();
 }
 
+function setFormLocked(locked) {
+  if (els.title) {
+    els.title.disabled = locked || Boolean(state.addToShortName);
+    els.title.readOnly = els.title.disabled;
+  }
+  els.dropzone?.classList.toggle("is-locked", locked);
+  [els.orientationGroup, els.gridGroup].forEach((group) => {
+    group?.querySelectorAll(".pill").forEach((pill) => {
+      pill.disabled = locked;
+    });
+  });
+}
+
 function refreshSubmitLabel() {
 	if (state.submitting) {
 		els.submit.textContent = "Создаём…";
@@ -570,6 +598,7 @@ function setSubmitting(flag) {
   state.submitting = flag;
   refreshSubmitLabel();
   updateSubmitState();
+  setFormLocked(state.submitting || state.jobActive);
 }
 
 function setJobActive(flag) {
@@ -577,6 +606,7 @@ function setJobActive(flag) {
 	els.submit.classList.toggle("is-working", flag);
 	refreshSubmitLabel();
 	updateSubmitState();
+  setFormLocked(state.submitting || state.jobActive);
 }
 
 async function handleSubmit(event) {
