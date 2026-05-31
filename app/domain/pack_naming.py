@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 import secrets
 import unicodedata
-
+from typing import Callable
 CYRILLIC_MAP = {
     "а": "a",
     "б": "b",
@@ -91,3 +91,36 @@ def build_short_name_with_token(title: str, bot_username: str, token: str) -> st
     short_name = f"{base}{token_part}{suffix}"
     short_name = re.sub(r"_+", "_", short_name)
     return short_name[:64].rstrip("_")
+
+def _short_name_with_token(title: str, bot_username: str, token: str) -> str:
+    """Базовое имя + несколько символов перед _by_ суффиксом.
+    Используется ТОЛЬКО при коллизии short_name в БД."""
+    base = normalize_short_name_base(title)
+    suffix = f"_by_{bot_username.lower()}"
+    token_part = f"_{token}" if token else ""
+    max_base_len = 64 - len(suffix) - len(token_part)
+    if max_base_len < 1:
+        max_base_len = 1
+    base = base[:max_base_len].strip("_")
+    if not base:
+        base = "e"
+    short_name = f"{base}{token_part}{suffix}"
+    short_name = re.sub(r"_+", "_", short_name)
+    return short_name[:64].rstrip("_")
+
+
+def build_unique_short_name(
+    title: str,
+    bot_username: str,
+    exists: Callable[[str], bool],
+    max_attempts: int = 12,
+) -> str:
+    candidate = build_short_name(title, bot_username)
+    if not exists(candidate):
+        return candidate
+    for _ in range(max_attempts):
+        candidate = _short_name_with_token(title, bot_username, secrets.token_hex(2))
+        if not exists(candidate):
+            return candidate
+    # Крайне маловероятно: фолбэк на более длинный токен.
+    return _short_name_with_token(title, bot_username, secrets.token_hex(6))

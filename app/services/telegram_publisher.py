@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import secrets
 from pathlib import Path
 
 from telethon import TelegramClient, functions, types
@@ -9,14 +8,19 @@ from telethon.tl.types import DocumentAttributeFilename
 
 from app.core.config import load_settings
 from app.core.logging_config import setup_logging
-from app.db.repository import JobRecord
-from app.domain.pack_naming import build_short_name_with_token
+from app.db.repository import (
+    JobRecord,
+    set_job_title_and_short_name,
+    short_name_exists,
+)
+from app.domain.pack_naming import build_unique_short_name
 from app.services.converter import ConversionResult
 
 logger = setup_logging()
 
 DEFAULT_EMOJI_ALT = "😎"
 DEFAULT_SOFTWARE_TAG = "telegram_emoji_bot"
+MAX_SHORT_NAME_ATTEMPTS = 5
 
 
 async def _build_client() -> TelegramClient:
@@ -34,46 +38,6 @@ async def _build_client() -> TelegramClient:
         raise RuntimeError("Telethon session is not authorized")
 
     return client
-
-
-async def _is_short_name_available(client: TelegramClient, short_name: str) -> bool:
-    """True if the sticker set short_name is free on Telegram."""
-    try:
-        result = await client(
-            functions.stickers.CheckShortNameRequest(short_name=short_name)
-        )
-        return bool(result)
-    except RPCError as e:
-        # SHORT_NAME_OCCUPIED / SHORT_NAME_INVALID etc. -> not usable
-        logger.warning(f"check short_name '{short_name}' unavailable: {e}")
-        return False
-
-
-async def resolve_available_short_name(
-    title: str,
-    short_name: str,
-    bot_username: str,
-    max_attempts: int = 12,
-) -> str:
-    """Check the desired short_name BEFORE any conversion work.
-    Returns it unchanged if free, otherwise returns a unique variant."""
-    client = await _build_client()
-    try:
-        candidate = short_name
-        for _ in range(max_attempts):
-            if await _is_short_name_available(client, candidate):
-                if candidate != short_name:
-                    logger.info(
-                        f"short_name '{short_name}' occupied; using '{candidate}'"
-                    )
-                return candidate
-            token = secrets.token_hex(3)
-            candidate = build_short_name_with_token(title, bot_username, token)
-        raise RuntimeError(
-            "Не удалось подобрать свободное имя пака. Попробуйте другое название."
-        )
-    finally:
-        await client.disconnect()
 
 
 async def _upload_tile_as_document(
@@ -152,7 +116,7 @@ async def add_tiles_to_existing_pack(
             )
             logger.info(f"Added tile {tile.path.name} to set {job.target_short_name}")
 
-        return f"https://t.me/addemoji/{job.target_short_name}"
+        return "https://t.me/addemoji/" + job.target_short_name
     finally:
         await client.disconnect()
 
@@ -163,13 +127,12 @@ async def create_custom_emoji_pack(
 ) -> str:
     if not job.title:
         raise RuntimeError("job.title is empty")
-
     if not job.short_name:
         raise RuntimeError("job.short_name is empty")
-
     if not conversion.successful_tiles:
         raise RuntimeError("No successful tiles to publish")
 
+    settings = load_settings()
     client = await _build_client()
 
     try:
@@ -177,16 +140,14 @@ async def create_custom_emoji_pack(
         if me is None:
             raise RuntimeError("Could not fetch current Telethon user")
 
+        # Плитки загружаем ОДИН раз — при ретрае имени переиспользуем их.
         sticker_items: list[types.InputStickerSetItem] = []
-
         for tile in sorted(conversion.successful_tiles, key=lambda x: x.index):
             logger.info(
                 f"Publishing tile {tile.path.name} size={tile.size_bytes} bytes "
                 f"fps={tile.fps} crf={tile.crf}"
             )
-
             input_document = await _upload_tile_as_document(client, tile.path)
-
             sticker_items.append(
                 types.InputStickerSetItem(
                     document=input_document,
@@ -195,18 +156,39 @@ async def create_custom_emoji_pack(
                 )
             )
 
-        await client(
-            functions.stickers.CreateStickerSetRequest(
-                user_id=me,
-                title=job.title,
-                short_name=job.short_name,
-                stickers=sticker_items,
-                emojis=True,
-                software=DEFAULT_SOFTWARE_TAG,
-            )
+        short_name = job.short_name
+        last_error: Exception | None = None
+
+        for attempt in range(MAX_SHORT_NAME_ATTEMPTS):
+            try:
+                await client(
+                    functions.stickers.CreateStickerSetRequest(
+                        user_id=me,
+                        title=job.title,
+                        short_name=short_name,
+                        stickers=sticker_items,
+                        emojis=True,
+                        software=DEFAULT_SOFTWARE_TAG,
+                    )
+                )
+                # Имя поменялось из-за коллизии — сохраняем актуальное в БД.
+                if short_name != job.short_name:
+                    set_job_title_and_short_name(job.public_id, job.title, short_name)
+                    job.short_name = short_name
+                return "https://t.me/addemoji/" + short_name
+            except RPCError as e:
+                if "OCCUPIED" not in str(e).upper():
+                    raise
+                last_error = e
+                short_name = build_unique_short_name(
+                    job.title, settings.bot_username, exists=short_name_exists
+                )
+                logger.warning(
+                    f"short_name occupied; retry {attempt + 1} with '{short_name}'"
+                )
+
+        raise RuntimeError(
+            f"Не удалось создать пак: имя занято после {MAX_SHORT_NAME_ATTEMPTS} попыток ({last_error})."
         )
-
-        return f"https://t.me/addemoji/{job.short_name}"
-
     finally:
         await client.disconnect()

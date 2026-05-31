@@ -267,7 +267,14 @@ def set_job_title_and_short_name(public_id: str, title: str, short_name: str) ->
             """,
             (title, short_name, public_id),
         )
-
+        
+def short_name_exists(short_name: str) -> bool:
+    with closing(_get_connection()) as conn:
+        row = conn.execute(
+            "SELECT 1 FROM jobs WHERE short_name = ? LIMIT 1",
+            (short_name,),
+        ).fetchone()
+        return row is not None
 
 def mark_job_ready(public_id: str) -> None:
     with closing(_get_connection()) as conn, conn:

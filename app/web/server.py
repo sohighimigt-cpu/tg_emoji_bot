@@ -8,7 +8,8 @@ from fastapi import FastAPI, File, Header, HTTPException, Request, UploadFile, s
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field, field_validator
-
+from app.db.repository import short_name_exists
+from app.domain.pack_naming import build_unique_short_name
 from app.core.config import load_settings
 from app.db.repository import (
     create_job,
@@ -329,7 +330,9 @@ async def create_miniapp_job(
         source_type="pending",
     )
 
-    short_name = build_short_name(payload.title, settings.bot_username)
+    short_name = build_unique_short_name(
+        payload.title, settings.bot_username, exists=short_name_exists
+    )
 
     update_job_selection(
         public_id=job.public_id,
@@ -477,7 +480,9 @@ async def update_miniapp_job(
             detail="Invalid grid for selected orientation",
         )
 
-    short_name = build_short_name(payload.title, settings.bot_username)
+    short_name = build_unique_short_name(
+        payload.title, settings.bot_username, exists=short_name_exists
+    )
 
     update_job_selection(
         public_id=public_id,
