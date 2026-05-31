@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 import secrets
 import unicodedata
-from typing import Callable
+from typing import Awaitable, Callable, Iterator
 CYRILLIC_MAP = {
     "а": "a",
     "б": "b",
@@ -92,6 +92,32 @@ def _short_name_with_token(title: str, bot_username: str, token: str) -> str:
     short_name = re.sub(r"_+", "_", short_name)
     return short_name[:64].rstrip("_")
 
+def iter_short_name_candidates(
+    title: str,
+    bot_username: str,
+    max_attempts: int = 12,
+) -> Iterator[str]:
+    """Кандидаты short_name в порядке приоритета: сначала чистое имя, затем
+    варианты с коротким токеном, затем длинный токен как крайний фолбэк.
+    Проверку занятости (БД или Bot API) выполняет вызывающая сторона."""
+    yield build_short_name(title, bot_username)
+    for _ in range(max_attempts):
+        yield _short_name_with_token(title, bot_username, secrets.token_hex(2))
+    yield _short_name_with_token(title, bot_username, secrets.token_hex(6))
+    
+async def build_unique_short_name_async(
+    title: str,
+    bot_username: str,
+    exists: Callable[[str], Awaitable[bool]],
+    max_attempts: int = 12,
+) -> str:
+    fallback = ""
+    for candidate in iter_short_name_candidates(title, bot_username, max_attempts):
+        fallback = candidate
+        if not await exists(candidate):
+            return candidate
+    return fallback
+
 
 def build_unique_short_name(
     title: str,
@@ -99,12 +125,9 @@ def build_unique_short_name(
     exists: Callable[[str], bool],
     max_attempts: int = 12,
 ) -> str:
-    candidate = build_short_name(title, bot_username)
-    if not exists(candidate):
-        return candidate
-    for _ in range(max_attempts):
-        candidate = _short_name_with_token(title, bot_username, secrets.token_hex(2))
+    fallback = ""
+    for candidate in iter_short_name_candidates(title, bot_username, max_attempts):
+        fallback = candidate
         if not exists(candidate):
             return candidate
-    # Крайне маловероятно: фолбэк на более длинный токен.
-    return _short_name_with_token(title, bot_username, secrets.token_hex(6))
+    return fallback

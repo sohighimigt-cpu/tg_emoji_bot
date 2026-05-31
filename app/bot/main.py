@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-import re
-import unicodedata
-import secrets
+
 from aiogram.exceptions import TelegramBadRequest
 from aiogram import Bot, Dispatcher, F
 from aiogram.enums import ParseMode
@@ -16,7 +14,7 @@ from app.bot.states import CreatePackStates
 from app.core.config import ensure_runtime_dirs, load_settings
 from app.db.repository import get_active_job_for_user
 from app.core.logging_config import setup_logging
-from app.domain.pack_naming import normalize_short_name_base, slugify_title
+from app.domain.pack_naming import build_unique_short_name_async
 from app.db.repository import (
     cancel_job,
     create_job,
@@ -56,26 +54,6 @@ async def set_bot_commands(bot: Bot) -> None:
         ]
     )
     
-def make_short_name_candidate(base: str, bot_username: str, suffix_part: str | None = None) -> str:
-    ending = f"_by_{bot_username.lower()}"
-    if suffix_part:
-        raw_base = f"{base}_{suffix_part}"
-    else:
-        raw_base = base
-
-    max_base_len = 64 - len(ending)
-    raw_base = raw_base[:max_base_len].strip("_")
-    raw_base = re.sub(r"_+", "_", raw_base)
-
-    if not raw_base:
-        raw_base = "emoji"
-
-    if not raw_base[0].isalpha():
-        raw_base = f"e_{raw_base}"
-        raw_base = raw_base[:max_base_len].strip("_")
-
-    return f"{raw_base}{ending}"
-
 
 async def is_sticker_set_name_taken(bot: Bot, short_name: str) -> bool:
     try:
@@ -90,25 +68,6 @@ async def is_sticker_set_name_taken(bot: Bot, short_name: str) -> bool:
         raise
 
 
-async def build_unique_short_name(title: str, bot_username: str, bot: Bot) -> str:
-    base = normalize_short_name_base(title)
-
-    candidates = [
-        make_short_name_candidate(base, bot_username),
-        make_short_name_candidate(base, bot_username, "2"),
-        make_short_name_candidate(base, bot_username, "3"),
-        make_short_name_candidate(base, bot_username, secrets.token_hex(2)),
-        make_short_name_candidate(base, bot_username, secrets.token_hex(3)),
-    ]
-
-    for candidate in candidates:
-        if not await is_sticker_set_name_taken(bot, candidate):
-            return candidate
-
-    while True:
-        candidate = make_short_name_candidate(base, bot_username, secrets.token_hex(4))
-        if not await is_sticker_set_name_taken(bot, candidate):
-            return candidate
 
 def orientation_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
@@ -471,7 +430,11 @@ async def handle_title_input(message: Message, bot: Bot, state: FSMContext) -> N
         await message.answer("Не удалось получить username бота.")
         return
 
-    short_name = await build_unique_short_name(title, bot_info.username, bot)
+    short_name = await build_unique_short_name_async(
+        title,
+        bot_info.username,
+        exists=lambda candidate: is_sticker_set_name_taken(bot, candidate),
+    )
     set_job_title_and_short_name(public_id, title, short_name)
 
     try:
