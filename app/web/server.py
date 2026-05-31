@@ -308,9 +308,12 @@ async def create_miniapp_job(
         source_type="pending",
     )
 
-    short_name = build_unique_short_name(
-        payload.title, settings.bot_username, exists=short_name_exists
-    )
+    if payload.add_to_short_name:
+        short_name = payload.add_to_short_name
+    else:
+        short_name = build_unique_short_name(
+            payload.title, settings.bot_username, exists=short_name_exists
+        )
 
     update_job_selection(
         public_id=job.public_id,

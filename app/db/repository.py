@@ -158,12 +158,20 @@ def get_latest_job_for_user(user_id: int) -> Optional[JobRecord]:
         ).fetchone()
     return _row_to_job(row) if row else None
 
-def list_jobs_for_user(user_id: int, *, limit: int = 50, offset: int = 0) -> list[JobRecord]:
+def list_jobs_for_user(
+    user_id: int,
+    *,
+    limit: int = 50,
+    offset: int = 0,
+    include_additions: bool = False,
+) -> list[JobRecord]:
+    addition_clause = "" if include_additions else "AND target_short_name IS NULL"
     with closing(_get_connection()) as conn:
         rows = conn.execute(
-            """
+            f"""
             SELECT * FROM jobs
             WHERE user_id = ?
+              {addition_clause}
             ORDER BY id DESC
             LIMIT ? OFFSET ?
             """,
