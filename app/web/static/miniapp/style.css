@@ -144,16 +144,6 @@ input {
   gap: 12px;
 }
 
-.account__label {
-  color: var(--muted);
-  font-size: 14px;
-}
-
-.account__value {
-  font-weight: 600;
-  text-align: right;
-  overflow-wrap: anywhere;
-}
 
 .form {
   display: grid;
@@ -857,7 +847,6 @@ input {
 }
 
 /* ===== Шапка: логотип-глаз ===== */
-.logo { display: grid; place-items: center; }
 .brand-eye {
 	width: 40px;
 	height: 40px;
@@ -874,7 +863,6 @@ input {
 }
 
 /* ===== Аккаунт: аватар + приветствие ===== */
-.account { display: flex; align-items: center; gap: 12px; }
 .account__avatar {
 	position: relative;
 	width: 46px;

@@ -8,7 +8,7 @@ from app.core.config import ensure_runtime_dirs, load_settings
 
 class SecretFilter(logging.Filter):
     def filter(self, record: logging.LogRecord) -> bool:
-        message = str(record.msg)
+        message = record.getMessage()
 
         settings = load_settings()
         secrets_to_hide = [

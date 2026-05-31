@@ -18,7 +18,8 @@ CREATE TABLE IF NOT EXISTS jobs (
     trim_duration REAL,
     title TEXT,
     short_name TEXT,
-    status TEXT NOT NULL DEFAULT 'queued',
+    status TEXT NOT NULL DEFAULT 'draft'
+    CHECK (status IN ('draft', 'pending', 'queued', 'processing', 'ready', 'done', 'failed', 'cancelled')),
     error_message TEXT,
     pack_url TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,

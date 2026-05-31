@@ -82,7 +82,10 @@ async def is_sticker_set_name_taken(bot: Bot, short_name: str) -> bool:
         await bot.get_sticker_set(name=short_name)
         return True
     except TelegramBadRequest as e:
-        if "STICKERSET_INVALID" in str(e):
+        # Bot API отвечает 400 STICKERSET_INVALID, когда набора не существует.
+        # Отдельного типа под это в aiogram нет — сверяем текст устойчиво.
+        message = (getattr(e, "message", None) or str(e)).upper()
+        if "STICKERSET_INVALID" in message:
             return False
         raise
 

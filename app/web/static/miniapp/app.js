@@ -21,11 +21,8 @@ const state = {
   pollTimer: null,
   submitting: false,
   jobActive: false,
-  submitting: false,
-  jobActive: false,
   addToShortName: null,
   addToTitle: null,
-  
 };
 
 const els = {};
@@ -659,29 +656,6 @@ function startPolling(publicId) {
   }, POLL_INTERVAL_MS);
 }
 
-function renderResult(job) {
-  const rows = [
-    ["Название", job.title || "—"],
-    ["Статус", statusLabel(job.status)],
-    ["Ориентация", state.orientationOptions[job.orientation] || job.orientation || "—"],
-    ["Сетка", job.grid_code || "—"],
-    ["Short name", job.short_name || "—"],
-  ];
-
-  const rowsHtml = rows
-    .map(
-      ([key, value]) =>
-        `<div class="result__row"><span class="result__key">${escapeHtml(key)}</span><span class="result__value">${escapeHtml(String(value))}</span></div>`
-    )
-    .join("");
-
-  const linkHtml = job.pack_url
-    ? `<a class="btn btn--primary btn--block result__link" href="${escapeHtml(job.pack_url)}" target="_blank" rel="noopener">Открыть пак в Telegram</a>`
-    : "";
-
-  els.result.innerHTML = rowsHtml + linkHtml;
-  els.result.hidden = false;
-}
 
 function setAddToPack(shortName, title) {
 	state.addToShortName = shortName || null;
@@ -704,14 +678,6 @@ function setAddToPack(shortName, title) {
 	updateSubmitState();
 }
 
-async function copyPackLink(url) {
-	try {
-		await navigator.clipboard.writeText(url);
-		showToast("Ссылка скопирована", "success");
-	} catch {
-		showToast("Не удалось скопировать", "error");
-	}
-}
 
 /* ---------- История ---------- */
 function historyBadgeKind(status) {
