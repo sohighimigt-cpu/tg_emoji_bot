@@ -21,7 +21,6 @@ from app.services.storage import remove_job_input_dir
 from app.services.telegram_publisher import (
     create_custom_emoji_pack,
     add_tiles_to_existing_pack,
-    resolve_available_short_name,
 )
 
 logger = setup_logging()
@@ -57,17 +56,7 @@ async def process_job(job, bot: Bot) -> str:
     if not job.short_name:
         raise RuntimeError("job.short_name is empty")
 
-    # 1) СНАЧАЛА проверяем занятость имени и при необходимости делаем уникальное
-    unique_short_name = await resolve_available_short_name(
-        title=job.title or "emoji",
-        short_name=job.short_name,
-        bot_username=settings.bot_username,
-    )
-    if unique_short_name != job.short_name:
-        job.short_name = unique_short_name
-        set_job_title_and_short_name(
-            job.public_id, job.title or "emoji", unique_short_name
-        )
+   
 
     # 2) И ТОЛЬКО ПОТОМ конвертируем и создаём пак
     conversion = convert_job_to_tiles(job, settings.output_dir)
