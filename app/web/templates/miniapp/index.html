@@ -21,8 +21,7 @@
         </svg>
       </div>
       <div>
-        <p class="app__eyebrow">Telegram Mini App</p>
-        <h1 class="app__title">Emoji Pack Builder</h1>
+        <h1 class="app__title">Feel Free</h1>
       </div>
     </header>
 
@@ -37,16 +36,6 @@
 
     <!-- ВКЛАДКА: СОЗДАТЬ -->
     <section class="view" data-view="create">
-      <div class="account">
-        <div class="account__avatar">
-          <img class="account__photo" data-user-photo alt="" hidden>
-          <span class="account__initial" data-user-initial aria-hidden="true">🙂</span>
-        </div>
-        <div class="account__text">
-          <span class="account__greeting" data-greeting>Привет,</span>
-          <span class="account__name" data-user>Инициализация…</span>
-        </div>
-      </div>
 
       <form class="card form" data-form novalidate>
         <div class="field">
@@ -65,10 +54,14 @@
               hidden
             />
             <div class="dropzone__empty" data-dropzone-empty>
-              <div class="dropzone__icon" aria-hidden="true">⬆</div>
-              <p class="dropzone__title">Перетащите файл сюда</p>
-              <p class="dropzone__hint">JPG, PNG, WEBP, GIF, MP4, WEBM, MOV · до 50 МБ</p>
-              <span class="btn btn--ghost">Выбрать файл</span>
+              <div class="dropzone__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M4 20h16"/>
+                </svg>
+              </div>
+              <p class="dropzone__title" data-dz-desktop-only>Перетащите файл сюда</p>
+              <p class="dropzone__hint">JPG · PNG · WEBP · GIF · MP4 · WEBM · MOV · до 50 МБ</p>
+              <span class="btn btn--primary dropzone__cta">Выбрать файл</span>
             </div>
             <div class="dropzone__preview" data-preview hidden>
               <div class="preview__media" data-preview-media>
@@ -133,15 +126,21 @@
 
   <nav class="tabbar">
     <button type="button" class="tabbar__btn is-active" data-tab="create">
-      <span class="tabbar__icon" aria-hidden="true">＋</span>
+      <span class="tabbar__icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      </span>
       <span class="tabbar__label">Создать</span>
     </button>
     <button type="button" class="tabbar__btn" data-tab="history">
-      <span class="tabbar__icon" aria-hidden="true">☰</span>
+      <span class="tabbar__icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="7.5" height="7.5" rx="1.8"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.8"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.8"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.8"/></svg>
+      </span>
       <span class="tabbar__label">Меню</span>
     </button>
     <button type="button" class="tabbar__btn" data-tab="settings">
-      <span class="tabbar__icon" aria-hidden="true">⚙</span>
+      <span class="tabbar__icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 7h9M17 7h3M4 12h3M11 12h9M4 17h6M14 17h6"/><circle cx="15" cy="7" r="2.1"/><circle cx="9" cy="12" r="2.1"/><circle cx="12" cy="17" r="2.1"/></svg>
+      </span>
       <span class="tabbar__label">Настройки</span>
     </button>
   </nav>

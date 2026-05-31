@@ -963,217 +963,184 @@ input {
 }
 
 /* ============================================================
-   🥃 LIQUID GLASS — премиальный моно-редизайн (append в конец)
-   всё на переменных → переопределяет предыдущие через каскад
+   🥃 LIQUID GLASS v2 — премиум моно-фронт
+   (вставить в самый конец style.css; заменяет прошлый блок)
    ============================================================ */
 
-/* --- ПАЛИТРА: премиальный монохром (светлая база) --- */
+/* --- Токены движения --- */
 :root {
-  /* Светлая тема — тёплый белый */
-  --bg: #f5f5f3;
-  --surface: rgba(255, 255, 255, 0.72);
-  --surface-2: rgba(255, 255, 255, 0.55);
-  --border: rgba(0, 0, 0, 0.08);
-  --border-strong: rgba(0, 0, 0, 0.14);
-  --text: #111114;
-  --muted: #6b6b73;
+  --motion-fast: 160ms;
+  --motion: 240ms;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* --- ПАЛИТРА: светлая (платиновый фон, чтобы стекло читалось) --- */
+:root {
+  --bg: #e8eaee;
+  --text: #0f1115;
+  --muted: #697086;
+  --border: rgba(17, 20, 26, 0.08);
+  --border-strong: rgba(17, 20, 26, 0.14);
+
+  --accent: #1c1c1e;            /* графит — МЕНЯЙ ЗДЕСЬ */
   --accent-contrast: #ffffff;
+  --accent-soft: color-mix(in srgb, var(--accent) 10%, transparent);
+  --accent-glow: color-mix(in srgb, var(--accent) 16%, transparent);
 
-  /* Акцент под лого-глаз — МЕНЯЙ ЗДЕСЬ */
-  --accent: #1c1c1e;
-  --accent-soft: color-mix(in srgb, var(--accent) 14%, transparent);
-  --accent-glow: color-mix(in srgb, var(--accent) 22%, transparent);
-
-  /* Стекло (умеренное, Apple-стиль) */
-  --glass-bg: rgba(255, 255, 255, 0.55);
-  --glass-border: rgba(255, 255, 255, 0.7);
-  --glass-hi: rgba(255, 255, 255, 0.9);     /* верхний блик = vibrancy */
-  --glass-blur: 18px;
-  --glass-saturate: 160%;
-  --glass-shadow: 0 8px 30px rgba(16, 24, 40, 0.10);
-
+  --glass-bg: rgba(255, 255, 255, 0.60);
+  --glass-border: rgba(255, 255, 255, 0.75);
+  --glass-hi: rgba(255, 255, 255, 0.95);
+  --glass-shadow: 0 10px 30px rgba(17, 24, 39, 0.12), 0 2px 6px rgba(17, 24, 39, 0.06);
+  --glass-blur: 20px;
+  --glass-saturate: 165%;
   --radius: 16px;
 }
 
-/* --- Палитра: тёмная база (глубокий чёрный) --- */
+/* --- ПАЛИТРА: тёмная (глубокий чёрный, белый акцент) --- */
 :root[data-theme="dark"] {
-  --bg: #0a0a0b;
-  --surface: rgba(255, 255, 255, 0.06);
-  --surface-2: rgba(255, 255, 255, 0.045);
-  --border: rgba(255, 255, 255, 0.10);
-  --border-strong: rgba(255, 255, 255, 0.16);
+  --bg: #08080a;
   --text: #f4f4f7;
   --muted: rgba(235, 235, 245, 0.6);
+  --border: rgba(255, 255, 255, 0.10);
+  --border-strong: rgba(255, 255, 255, 0.18);
+
+  --accent: #f5f5f7;            /* белый акцент в тёмной теме */
+  --accent-contrast: #0a0a0c;
+  --accent-soft: color-mix(in srgb, var(--accent) 14%, transparent);
+  --accent-glow: rgba(255, 255, 255, 0.10);
 
   --glass-bg: rgba(255, 255, 255, 0.07);
-  --glass-border: rgba(255, 255, 255, 0.16);
-  --glass-hi: rgba(255, 255, 255, 0.28);
-  --glass-shadow: 0 10px 34px rgba(0, 0, 0, 0.5);
+  --glass-border: rgba(255, 255, 255, 0.14);
+  --glass-hi: rgba(255, 255, 255, 0.22);
+  --glass-shadow: 0 14px 40px rgba(0, 0, 0, 0.55);
 }
 
-/* Фоллбэк по системной теме, если Telegram не выставил data-theme */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0a0a0b;
-    --surface: rgba(255, 255, 255, 0.06);
-    --surface-2: rgba(255, 255, 255, 0.045);
-    --border: rgba(255, 255, 255, 0.10);
-    --border-strong: rgba(255, 255, 255, 0.16);
+    --bg: #08080a;
     --text: #f4f4f7;
     --muted: rgba(235, 235, 245, 0.6);
+    --border: rgba(255, 255, 255, 0.10);
+    --border-strong: rgba(255, 255, 255, 0.18);
+    --accent: #f5f5f7;
+    --accent-contrast: #0a0a0c;
+    --accent-soft: color-mix(in srgb, var(--accent) 14%, transparent);
+    --accent-glow: rgba(255, 255, 255, 0.10);
     --glass-bg: rgba(255, 255, 255, 0.07);
-    --glass-border: rgba(255, 255, 255, 0.16);
-    --glass-hi: rgba(255, 255, 255, 0.28);
-    --glass-shadow: 0 10px 34px rgba(0, 0, 0, 0.5);
+    --glass-border: rgba(255, 255, 255, 0.14);
+    --glass-hi: rgba(255, 255, 255, 0.22);
+    --glass-shadow: 0 14px 40px rgba(0, 0, 0, 0.55);
   }
 }
 
-/* --- ФОН: моно + один акцентный glow + зерно --- */
-.bg-layer {
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  background: var(--bg);
-  pointer-events: none;
+/* --- ФОН: моно + один glow под лого + зерно --- */
+.bg-layer { position: fixed; inset: 0; z-index: -1; background: var(--bg); pointer-events: none; }
+.bg-layer::before {
+  content: ""; position: absolute; inset: 0;
+  background: radial-gradient(60% 40% at 50% 0%, var(--accent-glow) 0%, transparent 72%);
 }
-.bg-layer::before {                /* единственный glow под лого */
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(60% 42% at 50% 0%,
-    var(--accent-glow) 0%, transparent 72%);
-}
-.bg-layer::after {                 /* лёгкая зернистость — «дорогая» фактура */
-  content: "";
-  position: absolute;
-  inset: 0;
-  opacity: 0.04;
+.bg-layer::after {
+  content: ""; position: absolute; inset: 0; opacity: 0.04;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
-/* --- Общий «стеклянный» миксин (берём блик и тень) --- */
-.card,
-.history__item,
-.btn--ghost,
-.pill,
-.toast {
+/* --- Стеклянный миксин --- */
+.card, .history__item, .btn--ghost, .pill, .toast {
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
   backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
   -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
   box-shadow: var(--glass-shadow), inset 0 1px 0 var(--glass-hi);
 }
+.card, .history__item { border-radius: var(--radius); }
 
-.card,
-.history__item {
-  border-radius: var(--radius);
-}
-
-/* --- КНОПКИ --- */
+/* --- Кнопки --- */
+.btn { transition: filter var(--motion-fast) var(--ease-out), transform var(--motion-fast) var(--ease-spring), background-color var(--motion-fast) var(--ease-out); }
+.btn:active:not(:disabled) { transform: scale(0.97); }
 .btn--primary {
-  background: var(--accent);
-  color: var(--accent-contrast);
-  border: 1px solid color-mix(in srgb, var(--accent) 60%, transparent);
-  box-shadow: 0 6px 20px color-mix(in srgb, var(--accent) 35%, transparent),
-              inset 0 1px 0 rgba(255, 255, 255, 0.35);  /* блик сверху */
+  background: var(--accent); color: var(--accent-contrast);
+  border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--accent) 30%, transparent),
+              inset 0 1px 0 color-mix(in srgb, var(--glass-hi) 60%, transparent);
 }
-.btn--primary:hover:not(:disabled) {
-  filter: brightness(1.06);
-  transform: translateY(-1px);
-}
-.btn--ghost:hover {
-  border-color: color-mix(in srgb, var(--accent) 45%, var(--glass-border));
-  color: var(--accent);
-}
+.btn--primary:hover:not(:disabled) { filter: brightness(1.08); transform: translateY(-1px); }
+.btn--ghost:hover { border-color: color-mix(in srgb, var(--accent) 40%, var(--glass-border)); color: var(--accent); }
 
-/* --- PILLS --- */
+/* --- Pills --- */
 .pill.is-active {
-  background: var(--accent);
-  color: var(--accent-contrast);
-  border-color: color-mix(in srgb, var(--accent) 60%, transparent);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  background: var(--accent); color: var(--accent-contrast);
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--glass-hi) 50%, transparent);
 }
 
+/* --- ПЛАВАЮЩИЙ СТЕКЛЯННЫЙ ТАБ-БАР (iOS-стиль) --- */
 .tabbar {
-  left: 12px;
-  right: 12px;
-  bottom: calc(10px + env(safe-area-inset-bottom));
-  width: auto;
-  padding: 6px;
-  gap: 4px;
-  border-radius: 22px;
+  left: 50%; right: auto; transform: translateX(-50%);
+  bottom: calc(12px + env(safe-area-inset-bottom));
+  width: min(440px, calc(100% - 24px));
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px; padding: 6px;
   border: 1px solid var(--glass-border);
+  border-radius: 26px;
   background: var(--glass-bg);
   box-shadow: var(--glass-shadow), inset 0 1px 0 var(--glass-hi);
   backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
   -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
 }
 .tabbar__btn {
-  border-radius: 16px;
-  padding: 8px 4px;
+  border-radius: 20px; padding: 8px 4px 6px; gap: 3px;
+  transition: color var(--motion-fast) var(--ease-out),
+              background-color var(--motion-fast) var(--ease-out),
+              transform var(--motion-fast) var(--ease-spring);
 }
+.tabbar__btn:active { transform: scale(0.93); }
 .tabbar__btn.is-active {
   color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  background: color-mix(in srgb, var(--accent) 12%, var(--glass-hi));
   box-shadow: inset 0 1px 0 var(--glass-hi);
 }
-.tabbar__btn:hover {
-  background: color-mix(in srgb, var(--text) 6%, transparent);
-}
+.tabbar__icon { display: grid; place-items: center; font-size: 0; }
+.tabbar__icon svg { width: 22px; height: 22px; display: block; }
+.dropzone__icon svg { width: 30px; height: 30px; }
 
-
+/* --- ИСТОРИЯ: компактные карточки + НАСТОЯЩЕЕ сворачивание --- */
+.history__item { padding: 4px; gap: 0; }
+.history__head { padding: 12px 14px; border-radius: 12px; transition: background-color var(--motion-fast) var(--ease-out); }
+.history__head:hover { background: color-mix(in srgb, var(--text) 5%, transparent); }
 .history__details {
-  overflow: hidden;
-  display: grid;
-  grid-template-rows: 0fr;
-  margin-top: 0;
-  opacity: 0;
+  margin: 0; padding: 0 14px;
+  display: grid; grid-template-rows: 0fr; opacity: 0;
   transition: grid-template-rows var(--motion) var(--ease-out),
               opacity var(--motion) var(--ease-out),
-              margin-top var(--motion) var(--ease-out);
+              padding-bottom var(--motion) var(--ease-out);
 }
-.history__details > * {
-  min-height: 0;
-}
-.history__item.is-open .history__details {
-  grid-template-rows: 1fr;
-  opacity: 1;
-  margin-top: 12px;
-}
+.history__details-inner { min-height: 0; overflow: hidden; display: grid; gap: 12px; }
+.history__item.is-open .history__details { grid-template-rows: 1fr; opacity: 1; padding-bottom: 14px; }
 
+/* --- Бейдж статуса (моно) --- */
+.badge { background: color-mix(in srgb, var(--text) 8%, transparent); color: var(--muted); border: 1px solid var(--border); }
 
-.badge {
-  background: color-mix(in srgb, var(--text) 8%, transparent);
-  color: var(--muted);
-  border: 1px solid var(--border);
-}
+/* --- Лого --- */
+.logo { border: 1px solid var(--glass-border); box-shadow: inset 0 1px 0 var(--glass-hi); }
 
+/* --- Dropzone: DnD только на десктопе --- */
+.dropzone__cta { margin-top: 4px; }
+body.is-touch .dropzone { border-style: solid; }
+body.is-touch [data-dz-desktop-only] { display: none !important; }
+body.is-touch .dropzone__empty { padding: 22px 16px; gap: 10px; }
 
-.logo,
-.account__avatar {
-  border: 1px solid var(--glass-border);
-  box-shadow: inset 0 1px 0 var(--glass-hi);
-}
+/* --- Инпут чуть плотнее стекла --- */
+.input { background: color-mix(in srgb, var(--glass-bg) 80%, var(--surface-2)); }
 
-
+/* --- Фоллбэк без backdrop-filter --- */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  :root {
-    --glass-bg: rgba(255, 255, 255, 0.96);
-  }
-  :root[data-theme="dark"],
-  :root:not([data-theme="light"]) {
-    --glass-bg: rgba(22, 22, 24, 0.96);
-  }
-  .card,
-  .history__item,
-  .btn--ghost,
-  .pill,
-  .toast,
-  .tabbar {
-    background: var(--glass-bg);
-  }
+  :root { --glass-bg: rgba(255, 255, 255, 0.96); }
+  :root[data-theme="dark"], :root:not([data-theme="light"]) { --glass-bg: rgba(20, 20, 22, 0.96); }
+  .card, .history__item, .btn--ghost, .pill, .toast, .tabbar { background: var(--glass-bg); }
 }
 
-.input {
-  background: color-mix(in srgb, var(--surface-2) 100%, transparent);
+/* --- Меньше движения --- */
+@media (prefers-reduced-motion: reduce) {
+  .history__details, .btn, .tabbar__btn { transition: none; }
 }

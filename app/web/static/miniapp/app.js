@@ -57,6 +57,14 @@ function cacheEls() {
 	els.addBannerCancel = document.querySelector("[data-addbanner-cancel]");
 }
 
+// Drag-n-drop только на десктопе; на тач-устройствах — просто кнопка
+const DESKTOP_PLATFORMS = ["tdesktop", "macos", "web", "weba", "webk", "linux", "windows"];
+const platform = (tg?.platform || "").toLowerCase();
+const isTouch = platform
+  ? !DESKTOP_PLATFORMS.includes(platform)
+  : !window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+document.body.classList.toggle("is-touch", isTouch);
+
 /* ---------- Тема ---------- */
 function getThemePref() {
   try {
@@ -760,10 +768,12 @@ function renderHistory(items) {
             </span>
           </button>
           <div class="history__details">
-            <div class="history__detail-list">${detailRows}</div>
-            <div class="history__actions">
-              ${openCopyAdd}
-              ${deleteBtn}
+            <div class="history__details-inner">
+              <div class="history__detail-list">${detailRows}</div>
+              <div class="history__actions">
+                ${openCopyAdd}
+                ${deleteBtn}
+              </div>
             </div>
           </div>
         </div>`;
