@@ -113,6 +113,26 @@ function bindThemeControls() {
   });
 }
 
+function bindBackgroundParallax() {
+  const bg = document.querySelector(".bg-layer");
+  if (!bg) return;
+  // только устройства с настоящим курсором + уважаем «меньше движения»
+  if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+  let raf = null;
+  window.addEventListener("pointermove", (event) => {
+    if (raf) return;
+    raf = requestAnimationFrame(() => {
+      raf = null;
+      const dx = (event.clientX / window.innerWidth - 0.5) * 2;  // -1..1
+      const dy = (event.clientY / window.innerHeight - 0.5) * 2;
+      bg.style.setProperty("--mx", (dx * 16).toFixed(1));        // ±16px
+      bg.style.setProperty("--my", (dy * 16).toFixed(1));
+    });
+  });
+}
+
 /* ---------- Вкладки ---------- */
 function setActiveTab(name) {
   els.tabButtons.forEach((btn) => {
@@ -750,6 +770,12 @@ async function loadHistory() {
 	}
 }
 
+const ICONS = {
+  copy: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2.5"/><path d="M5 15V6A2.5 2.5 0 0 1 7.5 3.5H16"/></svg>',
+  add: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>',
+  trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7m2 0v12a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V7M10 11v6M14 11v6"/></svg>',
+};
+
 function renderHistory(items) {
   if (!items.length) {
     els.history.innerHTML = `<p class="history__empty">Пока нет созданных паков.</p>`;
@@ -757,66 +783,60 @@ function renderHistory(items) {
   }
   els.history.innerHTML = items
     .map((item) => {
-      const kind = historyBadgeKind(item.status);
-      const meta = [
+      const date = formatDate(item.created_at);
+      const params = [
         state.orientationOptions[item.orientation] || item.orientation,
         item.grid_code,
-        formatDate(item.created_at),
       ]
         .filter(Boolean)
         .map((part) => escapeHtml(String(part)))
         .join(" · ");
 
+      // бейдж — только когда статус важен (не «готово»)
+      const badge =
+        item.status === "done"
+          ? ""
+          : `<span class="badge" data-kind="${historyBadgeKind(item.status)}">${escapeHtml(statusLabel(item.status))}</span>`;
+
       const canManage =
         item.status === "done" && item.pack_url && item.short_name;
-      const openCopyAdd = canManage
-        ? `<a class="pill pill--sm" href="${escapeHtml(item.pack_url)}" target="_blank" rel="noopener">Открыть</a>
-           <button type="button" class="pill pill--sm" data-copy="${escapeHtml(item.pack_url)}">Копировать</button>
-           <button type="button" class="pill pill--sm" data-add="${escapeHtml(item.short_name)}" data-add-title="${escapeHtml(item.title || "")}">Добавить ещё</button>`
-        : "";
       const busy = item.status === "queued" || item.status === "processing";
-      const deleteBtn = busy
-        ? ""
-        : `<button type="button" class="pill pill--sm pill--danger" data-delete="${escapeHtml(item.public_id)}">Удалить</button>`;
 
-      const detailRows = [
-        item.short_name
-          ? `<div class="history__detail-row"><span>Short name</span><code>${escapeHtml(item.short_name)}</code></div>`
-          : "",
-        `<div class="history__detail-row"><span>Статус</span><span>${escapeHtml(statusLabel(item.status))}</span></div>`,
-        `<div class="history__detail-row"><span>Параметры</span><span>${meta}</span></div>`,
-      ]
-        .filter(Boolean)
-        .join("");
+      const openBtn = canManage
+        ? `<a class="histbtn histbtn--primary" href="${escapeHtml(item.pack_url)}" target="_blank" rel="noopener">Открыть пак</a>`
+        : "";
+
+      const icons = [];
+      if (canManage) {
+        icons.push(`<button type="button" class="histbtn histbtn--icon" data-copy="${escapeHtml(item.pack_url)}" title="Скопировать ссылку" aria-label="Скопировать ссылку">${ICONS.copy}</button>`);
+        icons.push(`<button type="button" class="histbtn histbtn--icon" data-add="${escapeHtml(item.short_name)}" data-add-title="${escapeHtml(item.title || "")}" title="Добавить ещё эмодзи" aria-label="Добавить ещё эмодзи">${ICONS.add}</button>`);
+      }
+      if (!busy) {
+        icons.push(`<button type="button" class="histbtn histbtn--icon histbtn--danger" data-delete="${escapeHtml(item.public_id)}" title="Удалить из истории" aria-label="Удалить из истории">${ICONS.trash}</button>`);
+      }
+
+      const actions =
+        openBtn || icons.length
+          ? `<div class="history__actions">${openBtn}<div class="history__icons">${icons.join("")}</div></div>`
+          : "";
 
       return `<div class="history__item" data-public-id="${escapeHtml(item.public_id)}">
           <button type="button" class="history__head" data-toggle aria-expanded="false">
             <span class="history__title">${escapeHtml(item.title || "Без названия")}</span>
             <span class="history__head-right">
-              <span class="badge" data-kind="${kind}">${escapeHtml(statusLabel(item.status))}</span>
+              ${badge}
               <span class="history__chevron" aria-hidden="true">▾</span>
             </span>
           </button>
           <div class="history__details">
             <div class="history__details-inner">
-              <div class="history__detail-list">${detailRows}</div>
-              <div class="history__actions">
-                ${openCopyAdd}
-                ${deleteBtn}
-              </div>
+              ${params ? `<div class="history__meta">${date ? escapeHtml(date) + " · " : ""}${params}</div>` : ""}
+              ${actions}
             </div>
           </div>
         </div>`;
     })
     .join("");
-}
-async function copyPackLink(url) {
-	try {
-		await navigator.clipboard.writeText(url);
-		showToast("Ссылка скопирована", "success");
-	} catch {
-		showToast("Не удалось скопировать", "error");
-	}
 }
 
 function bindHistoryActions() {
@@ -902,6 +922,7 @@ function bindUi() {
 	bindTabs();
 	bindThemeControls();
 	bindHistoryActions();
+  bindBackgroundParallax();
 	els.historyRefresh?.addEventListener("click", loadHistory);
 	els.addBannerCancel?.addEventListener("click", () => setAddToPack(null));
 }

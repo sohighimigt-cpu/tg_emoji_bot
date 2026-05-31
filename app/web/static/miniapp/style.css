@@ -590,25 +590,6 @@ input {
   gap: 12px;
 }
 
-.history__detail-list {
-  display: grid;
-  gap: 6px;
-}
-
-.history__detail-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  font-size: 14px;
-  color: var(--muted);
-}
-
-.history__detail-row code {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  overflow-wrap: anywhere;
-}
-
 .history__actions {
   display: flex;
   flex-wrap: wrap;
@@ -971,6 +952,9 @@ input {
 /* --- 0. Токены: премиальная моно-палитра + стекло --- */
 :root {
   --bg: #eef0f3;            /* светлая «платина» */
+  --bg-tint-1: rgba(99, 102, 241, 0.10);   /* индиго */
+  --bg-tint-2: rgba(56, 189, 248, 0.09);   /* небо */
+  --bg-tint-3: rgba(244, 114, 182, 0.09);
   --surface: #ffffff;
   --surface-2: #f3f4f6;
   --border: #e3e5ea;
@@ -995,6 +979,9 @@ input {
 
 :root[data-theme="dark"] {
   --bg: #0a0a0c;
+  --bg-tint-1: rgba(120, 150, 255, 0.16);
+  --bg-tint-2: rgba(110, 231, 255, 0.12);
+  --bg-tint-3: rgba(255, 140, 190, 0.14);
   --surface: #161618;
   --surface-2: #1f1f22;
   --border: #2a2a2e;
@@ -1017,6 +1004,9 @@ input {
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #0a0a0c;
+    --bg-tint-1: rgba(120, 150, 255, 0.16);
+    --bg-tint-2: rgba(110, 231, 255, 0.12);
+    --bg-tint-3: rgba(255, 140, 190, 0.14);
     --surface: #161618;
     --surface-2: #1f1f22;
     --border: #2a2a2e;
@@ -1051,15 +1041,18 @@ input {
   pointer-events: none;
   background: var(--bg);
   overflow: hidden;
+  transform: translate3d(calc(var(--mx, 0) * 1px), calc(var(--my, 0) * 1px), 0);
+  transition: transform 0.45s var(--ease-out);
+  will-change: transform;
 }
 .bg-layer::before {
   content: "";
   position: absolute;
   inset: -25%;
   background:
-    radial-gradient(42% 38% at 18% 22%, var(--accent-glow), transparent 60%),
-    radial-gradient(38% 34% at 82% 16%, rgba(120, 150, 255, 0.16), transparent 62%),
-    radial-gradient(46% 40% at 70% 86%, rgba(255, 140, 190, 0.14), transparent 64%);
+    radial-gradient(42% 38% at 18% 22%, var(--bg-tint-1), transparent 60%),
+    radial-gradient(38% 34% at 82% 16%, var(--bg-tint-2), transparent 62%),
+    radial-gradient(46% 40% at 70% 86%, var(--bg-tint-3), transparent 64%);
   filter: blur(12px);
   animation: bgDrift 28s ease-in-out infinite alternate;
 }
@@ -1086,7 +1079,7 @@ input {
   border: 1px solid color-mix(in srgb, var(--accent) 55%, var(--glass-border));
   box-shadow:
     0 1px 0 var(--glass-hi) inset,
-    0 8px 22px var(--accent-glow);
+    var(--glass-shadow);
   -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
   backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
   overflow: hidden;
@@ -1228,4 +1221,79 @@ body.is-touch .dropzone__cta {
 .input:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+:root[data-theme="light"] .card {
+  background: color-mix(in srgb, var(--surface) 80%, transparent);
+  border-color: color-mix(in srgb, var(--border) 60%, #ffffff);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.9) inset,
+    0 12px 34px rgba(15, 17, 21, 0.10);
+}
+
+/* мета вместо строк со статусом/short name */
+.history__meta {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* основная кнопка слева тянется, иконки — компактно справа */
+.history__actions {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+.history__icons {
+  display: inline-flex;
+  gap: 6px;
+  justify-self: end;
+}
+
+.histbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  border-radius: 12px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  color: var(--text);
+  cursor: pointer;
+  -webkit-backdrop-filter: blur(14px) saturate(150%);
+  backdrop-filter: blur(14px) saturate(150%);
+  transition:
+    transform var(--motion-fast) var(--ease-out),
+    border-color var(--motion) var(--ease-out),
+    background-color var(--motion) var(--ease-out);
+}
+.histbtn:active { transform: scale(0.96); }
+
+.histbtn--primary {
+  padding: 0 16px;
+  font-weight: 600;
+  text-decoration: none;
+  color: var(--accent-contrast);
+  background:
+    linear-gradient(180deg, var(--glass-hi), transparent 55%),
+    var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--glass-border));
+}
+
+.histbtn--icon {
+  width: 40px;
+  padding: 0;
+  color: var(--muted);
+}
+.histbtn--icon:hover {
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--border) 50%, var(--accent) 30%);
+}
+.histbtn--icon svg { width: 18px; height: 18px; display: block; }
+
+.histbtn--danger { color: var(--danger); }
+.histbtn--danger:hover {
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  border-color: color-mix(in srgb, var(--danger) 35%, var(--glass-border));
 }
