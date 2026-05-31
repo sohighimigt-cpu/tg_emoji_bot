@@ -399,3 +399,11 @@ def cancel_job(public_id: str, error_message: str = "cancelled_by_user") -> None
             """,
             ((error_message or "cancelled_by_user")[:1000], public_id),
         )
+        
+def delete_job_for_user(public_id: str, user_id: int) -> bool:
+    with closing(_get_connection()) as conn, conn:
+        cursor = conn.execute(
+            "DELETE FROM jobs WHERE public_id = ? AND user_id = ?",
+            (public_id, user_id),
+        )
+        return cursor.rowcount > 0

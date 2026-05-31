@@ -198,6 +198,9 @@ function fetchHistory() {
   return apiFetch("/api/miniapp/history", { method: "GET" });
 }
 
+function deleteJob(publicId) {
+  return apiFetch(`/api/miniapp/jobs/${publicId}`, { method: "DELETE" });
+}
 /* ---------- Экранирование ---------- */
 function escapeHtml(value) {
   return String(value)
@@ -710,61 +713,147 @@ async function loadHistory() {
 }
 
 function renderHistory(items) {
-	if (!items.length) {
-		els.history.innerHTML = `<p class="history__empty">Пока нет созданных паков.</p>`;
-		return;
+  if (!items.length) {
+    els.history.innerHTML = `<p class="history__empty">Пока нет созданных паков.</p>`;
+    return;
+  }
+  els.history.innerHTML = items
+    .map((item) => {
+      const kind = historyBadgeKind(item.status);
+      const meta = [
+        state.orientationOptions[item.orientation] || item.orientation,
+        item.grid_code,
+        formatDate(item.created_at),
+      ]
+        .filter(Boolean)
+        .map((part) => escapeHtml(String(part)))
+        .join(" · ");
+
+      const canManage =
+        item.status === "done" && item.pack_url && item.short_name;
+      const openCopyAdd = canManage
+        ? `<a class="pill pill--sm" href="${escapeHtml(item.pack_url)}" target="_blank" rel="noopener">Открыть</a>
+           <button type="button" class="pill pill--sm" data-copy="${escapeHtml(item.pack_url)}">Копировать</button>
+           <button type="button" class="pill pill--sm" data-add="${escapeHtml(item.short_name)}" data-add-title="${escapeHtml(item.title || "")}">Добавить ещё</button>`
+        : "";
+      const busy = item.status === "queued" || item.status === "processing";
+      const deleteBtn = busy
+        ? ""
+        : `<button type="button" class="pill pill--sm pill--danger" data-delete="${escapeHtml(item.public_id)}">Удалить</button>`;
+
+      const detailRows = [
+        item.short_name
+          ? `<div class="history__detail-row"><span>Short name</span><code>${escapeHtml(item.short_name)}</code></div>`
+          : "",
+        `<div class="history__detail-row"><span>Статус</span><span>${escapeHtml(statusLabel(item.status))}</span></div>`,
+        `<div class="history__detail-row"><span>Параметры</span><span>${meta}</span></div>`,
+      ]
+        .filter(Boolean)
+        .join("");
+
+      return `<div class="history__item" data-public-id="${escapeHtml(item.public_id)}">
+          <button type="button" class="history__head" data-toggle aria-expanded="false">
+            <span class="history__title">${escapeHtml(item.title || "Без названия")}</span>
+            <span class="history__head-right">
+              <span class="badge" data-kind="${kind}">${escapeHtml(statusLabel(item.status))}</span>
+              <span class="history__chevron" aria-hidden="true">▾</span>
+            </span>
+          </button>
+          <div class="history__details" hidden>
+            <div class="history__detail-list">${detailRows}</div>
+            <div class="history__actions">
+              ${openCopyAdd}
+              ${deleteBtn}
+            </div>
+          </div>
+        </div>`;
+    })
+    .join("");
+}
+async function copyPackLink(url) {
+	try {
+		await navigator.clipboard.writeText(url);
+		showToast("Ссылка скопирована", "success");
+	} catch {
+		showToast("Не удалось скопировать", "error");
 	}
-	els.history.innerHTML = items
-		.map((item) => {
-			const kind = historyBadgeKind(item.status);
-			const meta = [
-				state.orientationOptions[item.orientation] || item.orientation,
-				item.grid_code,
-				formatDate(item.created_at),
-			]
-				.filter(Boolean)
-				.map((part) => escapeHtml(String(part)))
-				.join(" · ");
-
-			const canManage =
-				item.status === "done" && item.pack_url && item.short_name;
-			const actions = canManage
-				? `<div class="history__actions">
-						<a class="pill pill--sm" href="${escapeHtml(item.pack_url)}" target="_blank" rel="noopener">Открыть</a>
-						<button type="button" class="pill pill--sm" data-copy="${escapeHtml(item.pack_url)}">Копировать</button>
-						<button type="button" class="pill pill--sm" data-add="${escapeHtml(item.short_name)}" data-add-title="${escapeHtml(item.title || "")}">Добавить ещё</button>
-					</div>`
-				: "";
-
-			return `<div class="history__item">
-					<div class="history__row">
-						<h3 class="history__title">${escapeHtml(item.title || "Без названия")}</h3>
-						<span class="badge" data-kind="${kind}">${escapeHtml(statusLabel(item.status))}</span>
-					</div>
-					<p class="history__meta">${meta}</p>
-					${actions}
-				</div>`;
-		})
-		.join("");
 }
 
-
 function bindHistoryActions() {
-	els.history.addEventListener("click", (event) => {
-		const copyBtn = event.target.closest("[data-copy]");
-		if (copyBtn) {
-			haptic("light");
-			copyPackLink(copyBtn.dataset.copy);
-			return;
-		}
-		const addBtn = event.target.closest("[data-add]");
-		if (addBtn) {
-			haptic("medium");
-			setAddToPack(addBtn.dataset.add, addBtn.dataset.addTitle);
-			setActiveTab("create");
-			showToast("Выберите файл — эмодзи добавятся в этот пак", "info");
-		}
-	});
+  els.history.addEventListener("click", (event) => {
+    const toggle = event.target.closest("[data-toggle]");
+    if (toggle) {
+      const item = toggle.closest(".history__item");
+      const details = item?.querySelector(".history__details");
+      if (details) {
+        const willOpen = details.hidden;
+        details.hidden = !willOpen;
+        toggle.setAttribute("aria-expanded", String(willOpen));
+        item.classList.toggle("is-open", willOpen);
+        haptic("light");
+      }
+      return;
+    }
+
+    const copyBtn = event.target.closest("[data-copy]");
+    if (copyBtn) {
+      haptic("light");
+      copyPackLink(copyBtn.dataset.copy);
+      return;
+    }
+
+    const addBtn = event.target.closest("[data-add]");
+    if (addBtn) {
+      haptic("medium");
+      setAddToPack(addBtn.dataset.add, addBtn.dataset.addTitle);
+      setActiveTab("create");
+      showToast("Выберите файл — эмодзи добавятся в этот пак", "info");
+      return;
+    }
+
+    const delBtn = event.target.closest("[data-delete]");
+    if (delBtn) {
+      haptic("warning");
+      handleDeleteHistory(delBtn.dataset.delete, delBtn);
+      return;
+    }
+  });
+}
+
+function confirmDialog(message) {
+  return new Promise((resolve) => {
+    if (tg?.showConfirm) {
+      tg.showConfirm(message, (ok) => resolve(Boolean(ok)));
+    } else {
+      resolve(window.confirm(message));
+    }
+  });
+}
+
+async function handleDeleteHistory(publicId, btn) {
+  if (!publicId) return;
+  const confirmed = await confirmDialog(
+    "Удалить пак из истории? Сам набор стикеров в Telegram останется."
+  );
+  if (!confirmed) return;
+
+  btn.disabled = true;
+  try {
+    await deleteJob(publicId);
+    const item = els.history.querySelector(
+      `.history__item[data-public-id="${publicId}"]`
+    );
+    if (item) item.remove();
+    if (!els.history.querySelector(".history__item")) {
+      els.history.innerHTML = `<p class="history__empty">Пока нет созданных паков.</p>`;
+    }
+    showToast("Удалено из истории", "success");
+    haptic("success");
+  } catch (err) {
+    btn.disabled = false;
+    showToast(err.message || "Не удалось удалить", "error");
+    haptic("error");
+  }
 }
 
 /* ---------- Старт ---------- */

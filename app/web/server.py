@@ -19,6 +19,7 @@ from app.db.repository import (
     list_jobs_for_user,
     count_inflight_jobs_for_user,
     update_job_selection,
+    delete_job_for_user,
 )
 from app.domain.pack_naming import build_short_name
 from app.domain.pack_options import (
@@ -529,3 +530,28 @@ async def get_miniapp_job(
         raise HTTPException(status_code=404, detail="Job not found")
 
     return _job_response(job)
+
+@app.delete("/api/miniapp/jobs/{public_id}")
+async def delete_miniapp_job(
+    public_id: str,
+    request: Request,
+    authorization: str | None = Header(default=None),
+):
+    settings = request.app.state.settings
+    verified = _extract_verified_user(authorization, settings.bot_token)
+
+    job = get_job_by_public_id_for_user(public_id, verified.user.id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    if job.status in {"queued", "processing"}:
+        raise HTTPException(
+            status_code=409,
+            detail="Нельзя удалить задачу, пока она обрабатывается.",
+        )
+
+    deleted = delete_job_for_user(public_id, verified.user.id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    return {"ok": True, "public_id": public_id}
