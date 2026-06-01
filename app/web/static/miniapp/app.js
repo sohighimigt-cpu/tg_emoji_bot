@@ -55,6 +55,10 @@ function cacheEls() {
 	els.addBanner = document.querySelector("[data-addbanner]");
 	els.addBannerName = document.querySelector("[data-addbanner-name]");
 	els.addBannerCancel = document.querySelector("[data-addbanner-cancel]");
+  els.tilePreviewField = document.querySelector("[data-tile-preview-field]");
+  els.tilePreviewStage = document.querySelector("[data-tile-preview-stage]");
+  els.tilePreviewGrid = document.querySelector("[data-tile-preview-grid]");
+  els.tilePreviewCaption = document.querySelector("[data-tile-preview-caption]");
 }
 
 // Drag-n-drop только на десктопе; на тач-устройствах — просто кнопка
@@ -391,6 +395,7 @@ function selectGrid(code) {
     pill.classList.toggle("is-active", pill.dataset.value === code);
   });
   updateSubmitState();
+  renderTilePreview();
 }
 
 /* ---------- Файл и превью ---------- */
@@ -405,6 +410,8 @@ function isVideo(name) {
 }
 
 function clearPreview() {
+  if (els.tilePreviewField) els.tilePreviewField.hidden = true;
+  
   if (state.previewUrl) {
     URL.revokeObjectURL(state.previewUrl);
     state.previewUrl = null;
@@ -455,6 +462,62 @@ function renderPreview(file) {
   els.dropzone.classList.add("has-file");
   els.config.hidden = false;
   updateSubmitState();
+  renderTilePreview();
+}
+
+function renderTilePreview() {
+  const field = els.tilePreviewField;
+  if (!field) return;
+
+  const file = getFile();
+  if (!file || !state.gridCode) {
+    field.hidden = true;
+    if (els.tilePreviewStage) els.tilePreviewStage.innerHTML = "";
+    return;
+  }
+
+  const [cols, rows] = state.gridCode.split("x").map((n) => parseInt(n, 10));
+  if (!cols || !rows) {
+    field.hidden = true;
+    return;
+  }
+
+  // пропорции сцены = пропорции холста в converter.py
+  [els.tilePreviewStage, els.tilePreviewGrid].forEach((el) => {
+    el.style.setProperty("--tp-cols", cols);
+    el.style.setProperty("--tp-rows", rows);
+  });
+
+  // медиа (переиспользуем уже созданный previewUrl)
+  els.tilePreviewStage.innerHTML = "";
+  let media;
+  if (isVideo(file.name)) {
+    media = document.createElement("video");
+    media.src = state.previewUrl;
+    media.muted = true;
+    media.loop = true;
+    media.autoplay = true;
+    media.playsInline = true;
+    media.setAttribute("muted", "");
+    media.setAttribute("playsinline", "");
+    els.tilePreviewStage.appendChild(media);
+    media.play?.().catch(() => {});
+  } else {
+    media = document.createElement("img");
+    media.src = state.previewUrl;
+    media.alt = "Превью раскладки";
+    els.tilePreviewStage.appendChild(media);
+  }
+
+  // линии сетки
+  const total = cols * rows;
+  els.tilePreviewGrid.innerHTML =
+    Array.from({ length: total }, () => "<span></span>").join("");
+
+  els.tilePreviewCaption.textContent =
+    `${total} эмодзи · ${cols}×${rows}. Прозрачные поля по краям станут пустыми плитками.`;
+
+  field.hidden = false;
 }
 
 function handleFile(file) {

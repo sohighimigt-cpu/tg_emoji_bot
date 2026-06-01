@@ -231,6 +231,57 @@ input {
   color: var(--muted);
 }
 
+.tile-preview {
+  position: relative;
+  width: 100%;
+  max-width: 320px;
+  margin: 0 auto;
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid var(--glass-border, var(--border));
+  background-color: var(--surface-2);
+  /* шахматка = прозрачные поля */
+  background-image:
+    linear-gradient(45deg, rgba(127,127,127,.16) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(127,127,127,.16) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, rgba(127,127,127,.16) 75%),
+    linear-gradient(-45deg, transparent 75%, rgba(127,127,127,.16) 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+}
+.tile-preview__stage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: var(--tp-cols, 1) / var(--tp-rows, 1);
+}
+.tile-preview__stage img,
+.tile-preview__stage video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+.tile-preview__grid {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: repeat(var(--tp-cols, 1), 1fr);
+  grid-template-rows: repeat(var(--tp-rows, 1), 1fr);
+  pointer-events: none;
+}
+.tile-preview__grid > span {
+  border: 1px solid rgba(255,255,255,.5);
+  box-shadow: inset 0 0 0 .5px rgba(0,0,0,.22);
+}
+.tile-preview__caption {
+  margin-top: 8px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--muted);
+}
+
 /* Поля появляются после выбора файла */
 .form__config {
   display: grid;
