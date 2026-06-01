@@ -23,6 +23,7 @@ const state = {
   jobActive: false,
   addToShortName: null,
   addToTitle: null,
+  crop: null,
 };
 
 const els = {};
@@ -59,6 +60,11 @@ function cacheEls() {
   els.tilePreviewStage = document.querySelector("[data-tile-preview-stage]");
   els.tilePreviewGrid = document.querySelector("[data-tile-preview-grid]");
   els.tilePreviewCaption = document.querySelector("[data-tile-preview-caption]");
+  els.cropField = document.querySelector("[data-crop-field]");
+  els.cropMedia = document.querySelector("[data-cropper-media]");
+  els.cropFrame = document.querySelector("[data-cropper-frame]");
+  els.cropGrid = document.querySelector("[data-cropper-grid]");
+  els.cropReset = document.querySelector("[data-crop-reset]");
 }
 
 // Drag-n-drop только на десктопе; на тач-устройствах — просто кнопка
@@ -396,6 +402,7 @@ function selectGrid(code) {
   });
   updateSubmitState();
   renderTilePreview();
+  renderCropper();
 }
 
 /* ---------- Файл и превью ---------- */
@@ -411,7 +418,9 @@ function isVideo(name) {
 
 function clearPreview() {
   if (els.tilePreviewField) els.tilePreviewField.hidden = true;
-  
+  state.crop = null;
+  if (els.cropField) els.cropField.hidden = true;
+  if (els.cropMedia) els.cropMedia.innerHTML = "";
   if (state.previewUrl) {
     URL.revokeObjectURL(state.previewUrl);
     state.previewUrl = null;
@@ -463,6 +472,7 @@ function renderPreview(file) {
   els.config.hidden = false;
   updateSubmitState();
   renderTilePreview();
+  renderCropper();
 }
 
 function renderTilePreview() {
@@ -482,13 +492,11 @@ function renderTilePreview() {
     return;
   }
 
-  // пропорции сцены = пропорции холста в converter.py
   [els.tilePreviewStage, els.tilePreviewGrid].forEach((el) => {
     el.style.setProperty("--tp-cols", cols);
     el.style.setProperty("--tp-rows", rows);
   });
 
-  // медиа (переиспользуем уже созданный previewUrl)
   els.tilePreviewStage.innerHTML = "";
   let media;
   if (isVideo(file.name)) {
@@ -509,15 +517,229 @@ function renderTilePreview() {
     els.tilePreviewStage.appendChild(media);
   }
 
-  // линии сетки
+  // применяем кроп: показываем только выбранную область, растянутую на сцену
+  if (state.crop) {
+    const { x, y, w, h } = state.crop;
+    media.style.position = "absolute";
+    media.style.objectFit = "fill";
+    media.style.width = (100 / w) + "%";
+    media.style.height = (100 / h) + "%";
+    media.style.left = (-(x / w) * 100) + "%";
+    media.style.top = (-(y / h) * 100) + "%";
+  }
+
   const total = cols * rows;
   els.tilePreviewGrid.innerHTML =
     Array.from({ length: total }, () => "<span></span>").join("");
 
+  const cropNote = state.crop ? " Кадр по сетке — без пустых полей." : " Прозрачные поля по краям станут пустыми плитками.";
   els.tilePreviewCaption.textContent =
-    `${total} эмодзи · ${cols}×${rows}. Прозрачные поля по краям станут пустыми плитками.`;
+    `${total} эмодзи · ${cols}×${rows}.` + cropNote;
 
   field.hidden = false;
+}
+
+/* ---------- Кадрирование (кроп) ---------- */
+const cropState = {
+  dragging: null,        // null | "move" | "nw" | "ne" | "se" | "sw"
+  startX: 0,
+  startY: 0,
+  startRect: null,       // {left, top, width, height} в px относительно медиа
+  mediaW: 0,
+  mediaH: 0,
+  aspect: 1,             // cols / rows
+};
+const CROP_MIN_PX = 24;
+
+function gridAspect() {
+  if (!state.gridCode) return null;
+  const [cols, rows] = state.gridCode.split("x").map((n) => parseInt(n, 10));
+  if (!cols || !rows) return null;
+  return cols / rows;
+}
+
+function measureCropMedia() {
+  const media = els.cropMedia?.querySelector("img, video");
+  if (!media) return null;
+  const rect = media.getBoundingClientRect();
+  return { w: rect.width, h: rect.height };
+}
+
+function fitDefaultCropRect(mediaW, mediaH, aspect) {
+  let w = mediaW;
+  let h = w / aspect;
+  if (h > mediaH) {
+    h = mediaH;
+    w = h * aspect;
+  }
+  return { left: (mediaW - w) / 2, top: (mediaH - h) / 2, width: w, height: h };
+}
+
+function applyCropRect(rect) {
+  if (!els.cropFrame) return;
+  els.cropFrame.style.left = rect.left + "px";
+  els.cropFrame.style.top = rect.top + "px";
+  els.cropFrame.style.width = rect.width + "px";
+  els.cropFrame.style.height = rect.height + "px";
+}
+
+function commitCrop(rect, mediaW, mediaH) {
+  state.crop = {
+    x: rect.left / mediaW,
+    y: rect.top / mediaH,
+    w: rect.width / mediaW,
+    h: rect.height / mediaH,
+  };
+}
+
+function clampCropRect(rect, mediaW, mediaH) {
+  rect.width = Math.min(rect.width, mediaW);
+  rect.height = Math.min(rect.height, mediaH);
+  rect.left = Math.max(0, Math.min(rect.left, mediaW - rect.width));
+  rect.top = Math.max(0, Math.min(rect.top, mediaH - rect.height));
+  return rect;
+}
+
+function renderCropper() {
+  const field = els.cropField;
+  if (!field) return;
+
+  const file = getFile();
+  const aspect = gridAspect();
+  if (!file || !aspect) {
+    field.hidden = true;
+    state.crop = null;
+    if (els.cropMedia) els.cropMedia.innerHTML = "";
+    return;
+  }
+
+  cropState.aspect = aspect;
+
+  // линии сетки внутри рамки
+  const [cols, rows] = state.gridCode.split("x").map((n) => parseInt(n, 10));
+  els.cropGrid.style.setProperty("--tp-cols", cols);
+  els.cropGrid.style.setProperty("--tp-rows", rows);
+  els.cropGrid.innerHTML =
+    Array.from({ length: cols * rows }, () => "<span></span>").join("");
+
+  // (пере)создаём медиа
+  els.cropMedia.innerHTML = "";
+  let media;
+  if (isVideo(file.name)) {
+    media = document.createElement("video");
+    media.src = state.previewUrl;
+    media.muted = true;
+    media.loop = true;
+    media.autoplay = true;
+    media.playsInline = true;
+    media.setAttribute("muted", "");
+    media.setAttribute("playsinline", "");
+  } else {
+    media = document.createElement("img");
+    media.src = state.previewUrl;
+    media.alt = "Исходник для кадрирования";
+  }
+  els.cropMedia.appendChild(media);
+
+  const onReady = () => {
+    const size = measureCropMedia();
+    if (!size || !size.w || !size.h) return;
+    cropState.mediaW = size.w;
+    cropState.mediaH = size.h;
+    const rect = fitDefaultCropRect(size.w, size.h, aspect);
+    applyCropRect(rect);
+    commitCrop(rect, size.w, size.h);
+    renderTilePreview();
+  };
+
+  if (media.tagName === "VIDEO") {
+    media.addEventListener("loadedmetadata", onReady, { once: true });
+    media.play?.().catch(() => {});
+  } else if (media.complete) {
+    requestAnimationFrame(onReady);
+  } else {
+    media.addEventListener("load", onReady, { once: true });
+  }
+
+  field.hidden = false;
+}
+
+function bindCropper() {
+  if (!els.cropFrame) return;
+
+  const onPointerDown = (event) => {
+    const handle = event.target.closest("[data-handle]");
+    cropState.dragging = handle ? handle.dataset.handle : "move";
+    cropState.startX = event.clientX;
+    cropState.startY = event.clientY;
+    cropState.startRect = {
+      left: parseFloat(els.cropFrame.style.left) || 0,
+      top: parseFloat(els.cropFrame.style.top) || 0,
+      width: parseFloat(els.cropFrame.style.width) || 0,
+      height: parseFloat(els.cropFrame.style.height) || 0,
+    };
+    els.cropFrame.setPointerCapture?.(event.pointerId);
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
+  const onPointerMove = (event) => {
+    if (!cropState.dragging) return;
+    const dx = event.clientX - cropState.startX;
+    const dy = event.clientY - cropState.startY;
+    const { mediaW, mediaH, aspect } = cropState;
+    const s = cropState.startRect;
+    let rect;
+
+    if (cropState.dragging === "move") {
+      rect = clampCropRect(
+        { left: s.left + dx, top: s.top + dy, width: s.width, height: s.height },
+        mediaW, mediaH,
+      );
+    } else {
+      // ресайз с сохранением пропорции сетки
+      const grows = cropState.dragging === "se" || cropState.dragging === "ne";
+      let newW = grows ? s.width + dx : s.width - dx;
+      newW = Math.max(CROP_MIN_PX, newW);
+      newW = Math.min(newW, mediaW, mediaH * aspect);
+      const newH = newW / aspect;
+
+      let left = s.left;
+      let top = s.top;
+      if (cropState.dragging === "nw") {
+        left = s.left + (s.width - newW);
+        top = s.top + (s.height - newH);
+      } else if (cropState.dragging === "ne") {
+        top = s.top + (s.height - newH);
+      } else if (cropState.dragging === "sw") {
+        left = s.left + (s.width - newW);
+      }
+      rect = clampCropRect({ left, top, width: newW, height: newH }, mediaW, mediaH);
+    }
+
+    applyCropRect(rect);
+    commitCrop(rect, mediaW, mediaH);
+    renderTilePreview();
+  };
+
+  const onPointerUp = (event) => {
+    if (!cropState.dragging) return;
+    cropState.dragging = null;
+    els.cropFrame.releasePointerCapture?.(event.pointerId);
+  };
+
+  els.cropFrame.addEventListener("pointerdown", onPointerDown);
+  window.addEventListener("pointermove", onPointerMove);
+  window.addEventListener("pointerup", onPointerUp);
+
+  els.cropReset?.addEventListener("click", () => {
+    if (!cropState.mediaW || !cropState.mediaH) return;
+    const rect = fitDefaultCropRect(cropState.mediaW, cropState.mediaH, cropState.aspect);
+    applyCropRect(rect);
+    commitCrop(rect, cropState.mediaW, cropState.mediaH);
+    renderTilePreview();
+    haptic("light");
+  });
 }
 
 function handleFile(file) {
@@ -688,6 +910,12 @@ async function handleSubmit(event) {
   };
   if (state.addToShortName) {
     body.add_to_short_name = state.addToShortName;
+  }
+  if (state.crop) {
+    body.crop_x = Number(state.crop.x.toFixed(6));
+    body.crop_y = Number(state.crop.y.toFixed(6));
+    body.crop_w = Number(state.crop.w.toFixed(6));
+    body.crop_h = Number(state.crop.h.toFixed(6));
   }
 
   setSubmitting(true);
@@ -963,6 +1191,7 @@ function bindUi() {
 	els.form.addEventListener("submit", handleSubmit);
 	els.title.addEventListener("input", updateSubmitState);
 	bindDropzone();
+  bindCropper();
 	bindTabs();
 	bindThemeControls();
 	bindHistoryActions();

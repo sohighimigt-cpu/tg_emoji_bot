@@ -244,6 +244,36 @@ def detect_source_kind(job: JobRecord) -> str:
 
     raise RuntimeError(f"Unsupported source type or extension: {job.source_type} / {ext}")
 
+def _has_crop(job: JobRecord) -> bool:
+    return (
+        job.crop_x is not None
+        and job.crop_y is not None
+        and job.crop_w is not None
+        and job.crop_h is not None
+        and job.crop_w > 0
+        and job.crop_h > 0
+    )
+
+
+def _geometry_vf(job: JobRecord, canvas_w: int, canvas_h: int) -> str:
+    """Часть фильтра ffmpeg: кроп (если задан) + приведение к холсту сетки."""
+    if _has_crop(job):
+        cx = min(max(job.crop_x, 0.0), 1.0)
+        cy = min(max(job.crop_y, 0.0), 1.0)
+        cw = min(max(job.crop_w, 0.0), 1.0 - cx)
+        ch = min(max(job.crop_h, 0.0), 1.0 - cy)
+        # рамка уже в пропорции сетки -> масштабируем точно, без pad
+        return (
+            f"crop=iw*{cw:.6f}:ih*{ch:.6f}:iw*{cx:.6f}:ih*{cy:.6f},"
+            f"scale={canvas_w}:{canvas_h}:flags=lanczos,"
+            f"format=rgba"
+        )
+    # без кропа — прежнее поведение: вписать + прозрачный pad
+    return (
+        f"scale={canvas_w}:{canvas_h}:force_original_aspect_ratio=decrease:flags=lanczos,"
+        f"pad={canvas_w}:{canvas_h}:(ow-iw)/2:(oh-ih)/2:color=black@0,"
+        f"format=rgba"
+    )
 
 def normalize_static_source(job: JobRecord, output_dir: Path, cols: int, rows: int) -> Path:
     if not job.source_file_path:
@@ -257,11 +287,7 @@ def normalize_static_source(job: JobRecord, output_dir: Path, cols: int, rows: i
     canvas_w = cols * EMOJI_SIZE
     canvas_h = rows * EMOJI_SIZE
 
-    vf = (
-        f"scale={canvas_w}:{canvas_h}:force_original_aspect_ratio=decrease:flags=lanczos,"
-        f"pad={canvas_w}:{canvas_h}:(ow-iw)/2:(oh-ih)/2:color=black@0,"
-        f"format=rgba"
-    )
+    vf = _geometry_vf(job, canvas_w, canvas_h)
 
     _run(
         [
@@ -295,12 +321,7 @@ def normalize_video_source(job: JobRecord, output_dir: Path, cols: int, rows: in
     canvas_w = cols * EMOJI_SIZE
     canvas_h = rows * EMOJI_SIZE
 
-    vf = (
-        f"fps=30,"
-        f"scale={canvas_w}:{canvas_h}:force_original_aspect_ratio=decrease:flags=lanczos,"
-        f"pad={canvas_w}:{canvas_h}:(ow-iw)/2:(oh-ih)/2:color=black@0,"
-        f"format=rgba"
-    )
+    vf = f"fps=30,{_geometry_vf(job, canvas_w, canvas_h)}"
 
     _run(
         [

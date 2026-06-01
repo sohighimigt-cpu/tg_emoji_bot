@@ -34,8 +34,17 @@ class JobRecord:
     target_short_name: Optional[str] = None
     trim_start: float = 0.0
     trim_duration: Optional[float] = None
+    target_short_name: Optional[str] = None
+    trim_start: float = 0.0
+    trim_duration: Optional[float] = None
+    crop_x: Optional[float] = None
+    crop_y: Optional[float] = None
+    crop_w: Optional[float] = None
+    crop_h: Optional[float] = None
 
 _ACTIVE_JOB_STATUSES = ("draft", "queued", "processing", "ready")
+
+
 
 @lru_cache(maxsize=1)
 def _database_path() -> str:
@@ -45,6 +54,8 @@ def _database_path() -> str:
 def _get_connection() -> sqlite3.Connection:
     conn = sqlite3.connect(_database_path(), timeout=30)
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON")  
+    conn.execute("PRAGMA journal_mode = WAL")  
     return conn
 
 
@@ -58,7 +69,11 @@ def get_active_public_ids() -> set[str]:
             _ACTIVE_JOB_STATUSES,
         )
         return {row[0] for row in cursor.fetchall()}
+def _row_value(row: sqlite3.Row, key: str, default=None):
+    return row[key] if key in row.keys() else default
 
+# ... внутри _row_to_job, после trim_duration:
+        
 def _row_to_job(row: sqlite3.Row) -> JobRecord:
     return JobRecord(
         id=row["id"],
@@ -84,7 +99,12 @@ def _row_to_job(row: sqlite3.Row) -> JobRecord:
         target_short_name=row["target_short_name"],
         trim_start=row["trim_start"] if row["trim_start"] is not None else 0.0,
         trim_duration=row["trim_duration"],
+        crop_x=_row_value(row, "crop_x"),
+        crop_y=_row_value(row, "crop_y"),
+        crop_w=_row_value(row, "crop_w"),
+        crop_h=_row_value(row, "crop_h"),
     )
+
 
 
 def generate_public_id() -> str:
@@ -142,10 +162,16 @@ def create_job(
 def get_job_by_public_id(public_id: str) -> Optional[JobRecord]:
     with closing(_get_connection()) as conn:
         row = conn.execute(
-            "SELECT * FROM jobs WHERE public_id = ?",
+            """
+            SELECT j.*, e.crop_x, e.crop_y, e.crop_w, e.crop_h
+            FROM jobs j
+            LEFT JOIN job_edits e ON e.public_id = j.public_id
+            WHERE j.public_id = ?
+            """,
             (public_id,),
-        ).fetchone()
+    )
     return _row_to_job(row) if row else None
+    
 
 
 def get_job_by_public_id_for_user(public_id: str, user_id: int) -> Optional[JobRecord]:
@@ -280,6 +306,29 @@ def update_job_selection(
             """,
             (orientation, grid_code, title, short_name,
              target_short_name, trim_start, trim_duration, public_id),
+        )
+
+def upsert_job_crop(
+    *,
+    public_id: str,
+    crop_x: float,
+    crop_y: float,
+    crop_w: float,
+    crop_h: float,
+) -> None:
+    with closing(_get_connection()) as conn, conn:
+        conn.execute(
+            """
+            INSERT INTO job_edits (public_id, crop_x, crop_y, crop_w, crop_h, updated_at)
+            VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(public_id) DO UPDATE SET
+                crop_x = excluded.crop_x,
+                crop_y = excluded.crop_y,
+                crop_w = excluded.crop_w,
+                crop_h = excluded.crop_h,
+                updated_at = CURRENT_TIMESTAMP
+            """,
+            (public_id, crop_x, crop_y, crop_w, crop_h),
         )
 
 def set_job_title_and_short_name(public_id: str, title: str, short_name: str) -> None:

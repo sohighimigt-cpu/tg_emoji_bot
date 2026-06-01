@@ -1433,3 +1433,55 @@ body.is-touch .dropzone__cta {
   :root[data-theme="light"] .histbtn {
     background: rgba(255, 255, 255, 0.82);
   }
+
+  .cropper {
+    position: relative;
+    width: 100%;
+    max-width: 360px;
+    margin: 0 auto;
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: var(--surface-2);
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .cropper__media { display: block; width: 100%; font-size: 0; }
+  .cropper__media img,
+  .cropper__media video {
+    display: block;
+    width: 100%;
+    height: auto;
+    pointer-events: none;
+  }
+  .cropper__frame {
+    position: absolute;
+    box-sizing: border-box;
+    border: 2px solid rgba(255, 255, 255, 0.95);
+    box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.45);
+    cursor: move;
+    touch-action: none;
+  }
+  .cropper__grid {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    grid-template-columns: repeat(var(--tp-cols, 1), 1fr);
+    grid-template-rows: repeat(var(--tp-rows, 1), 1fr);
+    pointer-events: none;
+  }
+  .cropper__grid > span { border: 1px solid rgba(255, 255, 255, 0.45); }
+  .cropper__handle {
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    background: #fff;
+    border-radius: 50%;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+    touch-action: none;
+  }
+  .cropper__handle[data-handle="nw"] { left: -9px; top: -9px; cursor: nwse-resize; }
+  .cropper__handle[data-handle="ne"] { right: -9px; top: -9px; cursor: nesw-resize; }
+  .cropper__handle[data-handle="se"] { right: -9px; bottom: -9px; cursor: nwse-resize; }
+  .cropper__handle[data-handle="sw"] { left: -9px; bottom: -9px; cursor: nesw-resize; }
+  .cropper__actions { margin-top: 8px; text-align: center; }

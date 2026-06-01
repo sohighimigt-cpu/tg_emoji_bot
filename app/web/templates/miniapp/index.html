@@ -101,7 +101,22 @@
             <span class="field__label">Сетка</span>
             <div class="pills" data-grid-group></div>
           </div>
-
+          <div class="field" data-crop-field hidden>
+            <span class="field__label">Кадрирование</span>
+            <div class="cropper" data-cropper>
+              <div class="cropper__media" data-cropper-media></div>
+              <div class="cropper__frame" data-cropper-frame>
+                <div class="cropper__grid" data-cropper-grid aria-hidden="true"></div>
+                <span class="cropper__handle" data-handle="nw"></span>
+                <span class="cropper__handle" data-handle="ne"></span>
+                <span class="cropper__handle" data-handle="se"></span>
+                <span class="cropper__handle" data-handle="sw"></span>
+              </div>
+            </div>
+            <div class="cropper__actions">
+              <button type="button" class="btn btn--ghost btn--sm" data-crop-reset>Сбросить рамку</button>
+            </div>
+          </div>
           <div class="field" data-tile-preview-field hidden>
             <span class="field__label">Превью раскладки</span>
             <div class="tile-preview" data-tile-preview>

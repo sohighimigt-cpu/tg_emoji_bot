@@ -7,7 +7,7 @@ from pathlib import Path
 from fastapi import FastAPI, File, Header, HTTPException, Request, UploadFile, status
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from app.db.repository import short_name_exists
 from app.domain.pack_naming import build_unique_short_name
 from app.core.config import load_settings
@@ -19,6 +19,7 @@ from app.db.repository import (
     list_jobs_for_user,
     count_inflight_jobs_for_user,
     update_job_selection,
+    upsert_job_crop,
     delete_job_for_user,
 )
 from app.domain.pack_naming import build_short_name
@@ -92,7 +93,23 @@ class JobSelectionRequest(BaseModel):
     title: str = Field(min_length=1, max_length=64)
     orientation: str = Field(min_length=1, max_length=32)
     grid_code: str = Field(min_length=1, max_length=32)
+    crop_x: float | None = Field(default=None, ge=0, le=1)
+    crop_y: float | None = Field(default=None, ge=0, le=1)
+    crop_w: float | None = Field(default=None, gt=0, le=1)
+    crop_h: float | None = Field(default=None, gt=0, le=1)    
 
+    @model_validator(mode="after")
+    def validate_crop(self):
+        parts = (self.crop_x, self.crop_y, self.crop_w, self.crop_h)
+        provided = [p is not None for p in parts]
+        if any(provided) and not all(provided):
+            raise ValueError("crop requires all of crop_x, crop_y, crop_w, crop_h")
+        if all(provided):
+            if self.crop_x + self.crop_w > 1.0 + 1e-6:
+                raise ValueError("crop x+w out of bounds")
+            if self.crop_y + self.crop_h > 1.0 + 1e-6:
+                raise ValueError("crop y+h out of bounds")
+        return self
     @field_validator("title")
     @classmethod
     def validate_title(cls, value: str) -> str:
@@ -323,6 +340,15 @@ async def create_miniapp_job(
         short_name=short_name,
         target_short_name=payload.add_to_short_name,
     )
+    
+    if payload.crop_x is not None:
+        upsert_job_crop(
+            public_id=job.public_id,   # в create_miniapp_job: public_id=job.public_id
+            crop_x=payload.crop_x,
+            crop_y=payload.crop_y,
+            crop_w=payload.crop_w,
+            crop_h=payload.crop_h,
+    )
 
     updated = get_job_by_public_id_for_user(job.public_id, verified.user.id)
     if updated is None:
@@ -472,6 +498,15 @@ async def update_miniapp_job(
         grid_code=payload.grid_code,
         title=payload.title,
         short_name=short_name,
+    )
+    
+    if payload.crop_x is not None:
+        upsert_job_crop(
+            public_id=public_id,   # в create_miniapp_job: public_id=job.public_id
+            crop_x=payload.crop_x,
+            crop_y=payload.crop_y,
+            crop_w=payload.crop_w,
+            crop_h=payload.crop_h,
     )
 
     updated = get_job_by_public_id_for_user(public_id, verified.user.id)

@@ -28,5 +28,14 @@ CREATE TABLE IF NOT EXISTS jobs (
     finished_at TEXT
 );
 
+CREATE TABLE IF NOT EXISTS job_edits (
+    public_id   TEXT PRIMARY KEY,
+    crop_x      REAL,
+    crop_y      REAL,
+    crop_w      REAL,
+    crop_h      REAL,
+    updated_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (public_id) REFERENCES jobs(public_id) ON DELETE CASCADE
+);
 CREATE INDEX IF NOT EXISTS idx_jobs_status_created_at ON jobs(status, created_at);
 CREATE INDEX IF NOT EXISTS idx_jobs_user_id_created_at ON jobs(user_id, created_at);
