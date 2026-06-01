@@ -33,7 +33,6 @@ class Settings:
     phone_number: str
     telethon_session_path: Path
     database_url: str 
-    database_path: Optional[Path]
     log_level: str
     data_dir: Path
     sessions_dir: Path
