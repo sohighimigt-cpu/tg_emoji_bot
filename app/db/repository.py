@@ -169,8 +169,8 @@ def get_job_by_public_id(public_id: str) -> Optional[JobRecord]:
             WHERE j.public_id = ?
             """,
             (public_id,),
-    )
-    return _row_to_job(row) if row else None
+        ).fetchone()
+        return _row_to_job(row) if row else None
     
 
 
@@ -415,7 +415,12 @@ def claim_next_queued_job() -> Optional[JobRecord]:
             return None
 
         claimed_row = conn.execute(
-            "SELECT * FROM jobs WHERE id = ?",
+            """
+            SELECT j.*, e.crop_x, e.crop_y, e.crop_w, e.crop_h
+            FROM jobs j
+            LEFT JOIN job_edits e ON e.public_id = j.public_id
+            WHERE j.id = ?
+            """,
             (row["id"],),
         ).fetchone()
 

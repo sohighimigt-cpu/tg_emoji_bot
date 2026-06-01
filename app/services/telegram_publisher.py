@@ -14,6 +14,11 @@ from app.db.repository import (
     set_job_title_and_short_name,
     short_name_exists,
 )
+from telethon.errors import (
+    FloodWaitError,
+    PackShortNameOccupiedError,
+    ShortnameOccupyFailedError,
+)
 from app.domain.pack_naming import build_unique_short_name
 from app.services.converter import ConversionResult
 
@@ -206,7 +211,7 @@ async def create_custom_emoji_pack(
                     set_job_title_and_short_name(job.public_id, job.title, short_name)
                     job.short_name = short_name
                 return "https://t.me/addemoji/" + short_name
-            except ShortnameOccupyFailedError as e:
+            except (PackShortNameOccupiedError, ShortnameOccupyFailedError) as e:
                 last_error = e
                 short_name = build_unique_short_name(
                     job.title, settings.bot_username, exists=short_name_exists
